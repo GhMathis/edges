@@ -17,7 +17,7 @@ library(rgl)
 ```
 
 ```{r}
-setwd("~/Fac/Master_Rennes/stage1/trefle")
+setwd("~/Fac/Master_Rennes/stage1/edges")
 
 str(test)
 imputed_associations_10000 = read.csv("Mathis/test_10000_asso.csv", stringsAsFactors = T)

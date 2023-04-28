@@ -2,7 +2,7 @@
 library(tidyverse)
 library(svd)
 
-setwd("~/Fac/Master_Rennes/stage1/trefle")
+setwd("~/Fac/Master_Rennes/stage1/edges")
 prediction = read.csv("hpc/outputs/predictions.csv", stringsAsFactors = T)
 str(prediction)
 head(prediction)
