@@ -20,13 +20,13 @@ library(rgl)
 setwd("~/Fac/Master_Rennes/stage1/edges")
 
 str(test)
-imputed_associations_10000 = read.csv("Mathis/test_10000_asso.csv", stringsAsFactors = T)
+imputed_associations_10000 = read.csv("output/test_10000_asso.csv", stringsAsFactors = T)
 clover = read.csv("data/clover.csv", stringsAsFactors = T)
 head(clover)
-trefle = read.csv("artifacts/trefle.csv", stringsAsFactors = T)
+trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 which(paste(imputed_associations_10000$virus, imputed_associations_10000$host) %in%
                                   paste(clover$Virus, clover$Host))
-load("Mathis/svd_10000.RData")
+load("output/svd_10000.RData")
 ```
 
 ###Compute the t-svd with and teh random graph dot product
@@ -470,7 +470,7 @@ planes3d(fit_fnorm_G$coefficients[2],fit_fnorm_G$coefficients[3], -1, fit_fnorm_
 
 ```{r}
 
-imputed_associations = read.csv("artifacts/imputed_associations.csv", stringsAsFactors = T)
+imputed_associations = read.csv("data/imputed_associations.csv", stringsAsFactors = T)
 
 uni_ntw_trefle_p = uni_ntw_trefle
 for(n in 1:nrow(imputed_associations)){
@@ -483,6 +483,7 @@ for(n in 1:nrow(imputed_associations)){
 all(rowSums(uni_ntw_trefle_p) == rowSums(uni_ntw_trefle_p)) # symmetry OK
 
 ```
+
 ```{r}
 library(igraph)
 
@@ -585,6 +586,7 @@ ggplot(imputed_associations_10000, aes(communicabiliy_spectre,frobenius_norm_L))
   geom_smooth(method = "lm")
 
 ```
+
 ```{r}
 str(imputed_associations_10000)
 imputed_associations_10000$HostFamily = 0
@@ -632,9 +634,23 @@ plot(grh4,edge.width=abs(E(grh4)$weight)*4,layout=layout_in_circle,
 ```
 ### Comunicability difference
 ```{r}
+## test 
+A = matrix(c(0,1,1,0,
+                1,0,1,1,
+                1,1,0,0,
+                0,1,0,0), nrow =4, ncol =4)
+dA = matrix(c(0,0,1,0,
+                0,0,1,1,
+                1,1,0,0,
+                0,1,0,0), nrow =4, ncol =4)
+A%*%A
+dA%*%dA
+```
+
+```{r}
 imputed_associations_10000$communicabiliy_diff = 0
 n= 1
-library(RSpectra)
+
 for(n in 1:nrow(imputed_associations_10000)){
  
   ID = c(which(rownames(uni_ntw_trefle) == imputed_associations_10000$virus[n]),
