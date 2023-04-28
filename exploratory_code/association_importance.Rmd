@@ -1,0 +1,654 @@
+---
+title: "Untitled"
+author: "MG"
+date: "2023-04-20"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggpubr)
+library(svd)
+library(rgl)
+```
+
+```{r}
+setwd("~/Fac/Master_Rennes/stage1/trefle")
+
+str(test)
+imputed_associations_10000 = read.csv("Mathis/test_10000_asso.csv", stringsAsFactors = T)
+clover = read.csv("data/clover.csv", stringsAsFactors = T)
+head(clover)
+trefle = read.csv("artifacts/trefle.csv", stringsAsFactors = T)
+which(paste(imputed_associations_10000$virus, imputed_associations_10000$host) %in%
+                                  paste(clover$Virus, clover$Host))
+load("Mathis/svd_10000.RData")
+```
+
+###Compute the t-svd with and teh random graph dot product
+```{r}
+svd.rpd <-function(ntw){
+  ### truncate at 12 dim
+  SVD = propack.svd(ntw, neig= 12)
+  trunc_d =  diag(sqrt(SVD$d))
+ 
+
+  
+  L =(SVD$u %*% trunc_d)
+  egein_V = SVD$d
+ 
+  R = trunc_d %*% t(SVD$v)
+  t_R = t(R)#[,1:12]
+
+  return(list(L = L,t_R = t_R, egein_V = egein_V))
+}
+```
+###From row ntw to matrice ntw (bipartie => non_square)
+```{r}
+matrix.associations = function(Virus, Host){
+  long_df = data.frame(Virus = Virus, Host = Host) 
+  n_virus = length(levels(Virus))
+  n_host = length(levels(Host))
+  ntw = matrix(0, nrow = n_virus, ncol = n_host)
+  
+  colnames(ntw) = levels(Host)
+  rownames(ntw) = levels(Virus)
+  for(v in unique(Virus)){
+    temp = long_df %>% filter(Virus == v)
+    for(h in unique(temp$Host)){
+      ntw[which(rownames(ntw) == v),
+                 which(colnames(ntw) == h)] = 1
+      
+    }
+  }
+  return(ntw)
+}
+```
+###From row ntw to matrice ntw (unipartie => square)
+```{r}
+### give a symetrical square matrice Host+Virus x Host+Virus association
+# all Host-Host or Virus-Virus associations are 0 
+matrix.associations.uni = function(Virus, Host){
+  long_df = data.frame(Virus = Virus, Host = Host) 
+  n_virus = length(unique(Virus))
+  n_host = length(unique(Host))
+  ntw = matrix(0, nrow = n_virus+n_host, ncol = n_host+n_virus) # put host and virus
+  # in both colums and rows
+  
+  colnames(ntw) = c(unique(Host),unique(Virus))
+  rownames(ntw) = c(unique(Host),unique(Virus))
+  for(v in unique(Virus)){
+    temp = long_df %>% filter(Virus == v)
+    for(h in unique(temp$Host)){
+      ntw[which(rownames(ntw) == v),
+          which(colnames(ntw) == h)] = 1
+      ntw[which(rownames(ntw) == h),
+          which(colnames(ntw) == v)] = 1
+      
+    }
+  }
+  norm
+  return(ntw)
+}
+
+```
+###Different type of distance
+```{r eval=FALSE, include=FALSE}
+# norm and distance test
+test = matrix(c(1,1,1,1), nrow =2, ncol= 2)
+test2 =  matrix(c(1,0,0,1), nrow =2, ncol= 2)
+test3 = test - test2
+norm(test3, "f") ####Seems to keep the 2D information
+norm(test, "f")
+norm(test2, "m")
+norm(test2, "m")
+norm(test)-norm(test2) #### Act like a vector based distance
+norm(svd_data[[n]]$L, "f") - norm(I0$L, "f")
+sqrt(sum((svd_data[[n]]$L)**2-I0$L**2))
+str(dist_R)
+norm(svd_data[[n]]$L, "f") - norm(I0$L, "f")
+```
+
+Main network ( trelfe = (imputed + observed association) )
+```{r}
+ntw_trefle = matrix.associations(trefle$virus, trefle$host)
+sum(ntw_trefle)/(ncol(ntw_trefle)*nrow(ntw_trefle))
+```
+Distance and norm computation
+
+```{r}
+I0 = svd.rpd(ntw_trefle)
+str(I0)
+base_L = norm(I0$L)
+base_R = norm(I0$t_R)
+dist_L = vector(length = nrow(imputed_associations_10000))
+dist_R = vector(length = nrow(imputed_associations_10000))
+dist_L2 = vector(length = nrow(imputed_associations_10000))
+dist_R2 = vector(length = nrow(imputed_associations_10000))
+dist_elementwise_L = vector(length = nrow(imputed_associations_10000))
+dist_elementwise_R = vector(length = nrow(imputed_associations_10000))
+frobenius_norm_L = vector(length = nrow(imputed_associations_10000))
+frobenius_norm_R = vector(length = nrow(imputed_associations_10000))
+frobenius_norm_L2 = vector(length = nrow(imputed_associations_10000))
+frobenius_norm_R2 = vector(length = nrow(imputed_associations_10000))
+for(n in 1: nrow(imputed_associations_10000)){
+  dist_L[n] = norm(svd_data[[n]]$L)- base_L
+  dist_R[n] = norm(svd_data[[n]]$t_R)-base_R
+  dist_L2[n] = norm(svd_data[[n]]$L- base_L)
+  dist_R2[n] = norm(svd_data[[n]]$t_R-base_R)
+  dist_elementwise_L[n]= sum(abs(svd_data[[n]]$L - I0$L))
+  dist_elementwise_R[n]= sum(abs(svd_data[[n]]$t_R - I0$t_R ))
+  frobenius_norm_L[n] = norm(svd_data[[n]]$L - I0$L, "f")
+  frobenius_norm_R[n] = norm(svd_data[[n]]$t_R - I0$t_R, "f")
+  frobenius_norm_L2[n] = norm(svd_data[[n]]$L,"f") - norm(I0$L, "f")
+  frobenius_norm_R2[n] = norm(svd_data[[n]]$t_R,"f") - norm(I0$t_R, "f")
+  norm(svd_data[[n]]$t_R,"2")
+  norm(svd_data[[n]]$L,"2")
+}
+
+imputed_associations_10000$dist_L = dist_L
+imputed_associations_10000$dist_R = dist_R
+imputed_associations_10000$dist_L2 = dist_L2
+imputed_associations_10000$dist_R2 = dist_R2
+imputed_associations_10000$dist_elementwise_L = dist_elementwise_L
+imputed_associations_10000$dist_elementwise_R = dist_elementwise_R
+imputed_associations_10000$frobenius_norm_L = frobenius_norm_L
+imputed_associations_10000$frobenius_norm_R = frobenius_norm_R
+imputed_associations_10000$frobenius_norm_L2 = frobenius_norm_L2
+imputed_associations_10000$frobenius_norm_R2 = frobenius_norm_R2
+str(imputed_associations_10000)
+```
+
+distance between T and dT with 2 methods :
+- first one is the **norm (maximum absolute column sum)**
+- second is the difference of the sums of all composante of L or R
+```{r echo=FALSE}
+
+g1 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(dist_L,P))+
+  geom_smooth(aes(dist_L,P), method = "lm")
+g2 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(dist_R,P))+
+  geom_smooth(aes(dist_R,P), method = "lm")
+g3 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(dist_L2,P))+
+  geom_smooth(aes(dist_L2,P), method = "lm")
+g4 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(dist_R2,P))+
+  geom_smooth(aes(dist_R2,P), method = "lm")
+ggarrange(g1,g2,g3,g4)
+```
+```{r}
+g5 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(dist_L,P))+
+  geom_smooth(aes(dist_L,P), method = "lm")
+g6 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(dist_R,P))+
+  geom_smooth(aes(dist_R,P), method = "lm")
+g7 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(frobenius_norm_L,P))+
+  geom_smooth(aes(frobenius_norm_L,P), method = "lm")
+g8 = ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(frobenius_norm_R,P))+
+  geom_smooth(aes(frobenius_norm_R,P), method = "lm")
+ggarrange(g5,g6, g7, g8)
+```
+
+Impact on the first eigenvalue
+```{r}
+str(svd_data[[1]])
+
+l1 = sapply(svd_data, function(x) x$egein_V)
+head(l1)
+diff_l1 = l1-svd(ntw_trefle)$d[1]
+imputed_associations_10000$diff_l1 = diff_l1
+ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(diff_l1,P))+
+  geom_smooth(aes(diff_l1,P))
+ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(diff_l1,dist_L))+
+  geom_smooth(aes(diff_l1,dist_L))
+
+ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(diff_l1,dist_R))+
+  geom_smooth(aes(diff_l1,dist_R))
+ggplot(imputed_associations_10000)+
+  geom_bin2d(aes(dist_L,dist_R))+
+  geom_smooth(aes(dist_L,dist_R))
+library(car)
+fit_maxsum = lm(P~dist_L+dist_R, data =imputed_associations_10000 )
+
+
+
+with(imputed_associations_10000,
+     plot3d(dist_L,
+          dist_R, 
+       P, xlab = " max col sum L difference" ,
+       ylab = "max col sum L difference", zlab ="P",
+      alpha = 0.2))
+
+planes3d(fit_maxsum$coefficients[2],fit_maxsum$coefficients[3], -1, fit_maxsum$coefficients[1],
+         alpha = 0.5, col = "blue")
+
+
+fit_allsum = lm(P~dist_elementwise_L+dist_elementwise_R, data =imputed_associations_10000 )
+
+with(imputed_associations_10000,
+     plot3d(dist_elementwise_L,
+          dist_elementwise_R, 
+       P, xlab = "sum(L)  difference" ,
+       ylab = "sum(R)  difference", zlab ="P",
+      alpha = 0.2))
+
+planes3d(fit_allsum$coefficients[2],fit_allsum$coefficients[3], -1, fit_allsum$coefficients[1],
+         alpha = 0.5, col = "blue")
+
+fit_fnorm = lm(P~frobenius_norm_L+frobenius_norm_R, data =imputed_associations_10000 )
+plot(fit_fnorm)
+with(imputed_associations_10000,
+     plot3d(frobenius_norm_L,
+          frobenius_norm_R, 
+       P, xlab = "frobenius norm L" ,
+       ylab = "frobenius norm R", zlab ="P"))
+
+planes3d(fit_fnorm$coefficients[2],fit_fnorm$coefficients[3], -1, fit_fnorm$coefficients[1],
+         alpha = 0.5, col = "blue")
+
+fit_fnorm2 = lm(P~frobenius_norm_L2+frobenius_norm_R2, data =imputed_associations_10000 )
+plot(fit_fnorm)
+with(imputed_associations_10000,
+     plot3d(frobenius_norm_L2,
+          frobenius_norm_R2, 
+       P, xlab = "frobenius norm L2" ,
+       ylab = "frobenius norm R2", zlab ="P"))
+
+planes3d(fit_fnorm2$coefficients[2],fit_fnorm2$coefficients[3], -1, fit_fnorm2$coefficients[1],
+         alpha = 0.5, col = "blue")
+```
+###Link importance metric idea
+Main idea is that disturbing the network and using SVD-RGDP seems to be a long path to extrapolate importance of interactions.
+Maybe all the informations are already présent in the basic network and there is no nedd to induce modification on a link to see its importance
+
+An idea to make a metric of link importance is to use the propertie that powers a n of ntw matrices give numbers of path between 2 nodes of lenght n. 
+This propertie give use how many time a node will impact an other node with n intermediary nodes. 
+$$(A^n)_{ij} = $$ nbrs of diff walk of length n between i an j
+10.1103/PhysRevE.77.036111 show that based on this we can calulate the communicability between nodes using teh exponential of A
+$$(e^{A})_{ij}$$
+####First idea
+$$C_{pq} = \sum_k\frac{1}{\lambda_1}^k*A^k$$
+```{r}
+link.importance<- function(A, deepness){
+  
+  # scaling value given the first eigen value
+  lambda1 = eigen(A)$values[1]
+  alpha = 1/lambda1 
+  
+  #
+  D = diag(eigen(A)$values)
+  P = eigen(A)$vectors
+  d = D
+  out = A
+  for (k in 1:deepness){
+    d =(alpha**k)*D**k
+    out = out + P %*% d %*% solve(P)
+  }
+  
+  return(out)
+}
+```
+####Paper more detail and mathematical based idea
+$$G_{pq} = \frac{1}{s!}P^{(s)}_{pq} + \sum_{k>s}\frac{1}{k!}W^{(k)}_{pq} $$
+with $P^{(s)}_{pq}$ : nbr of the shortest path between p and q with a lenght s
+$W^{(k)}_{pq}$ : nbr of walks connecting p and q with a lenght k > s
+weight in decreasing order of the length of the walk.
+
+this give : 
+$$
+G_{p q}=\sum_{k=0}^{\infty} \frac{\left(\mathbf{A}^k\right)_{p q}}{k !}=\left(e^{\mathbf{A}}\right)_{p q}
+$$
+This formula is compute with the next function for a test matrice A
+```{r echo=FALSE}
+A = matrix(c(0,0,1,0,
+                0,0,1,1,
+                1,1,0,0,
+                0,1,0,0), nrow =4, ncol =4)
+A
+```
+
+```{r}
+
+link.importance.2<- function(A, deepness){
+
+  d = eigen(A)$values
+  P = eigen(A)$vectors
+  out = 0
+  k=0
+  for (k in 0:deepness){
+    #d = D**k
+      out = out + 1/factorial(k)*(P %*%  diag(d**k) %*% solve(P)) # A + A²
+                                     # A + P%*%D
+  }
+  
+  return(out)
+}
+link.importance.2(A, 5)
+link.importance.2(A, 15)
+link.importance.2(A, 20)
+link.importance.2(A, 40)
+G=0
+for(i in 1:ncol(eigen(A)$vectors)){
+  temp = eigen(A)$vectors[,i]%*%t(eigen(A)$vectors[,i])*exp(eigen(A)$values[i])
+  G = G + temp
+}
+G
+
+```
+As we can see link.importance.2 function is an aproximation of the communicability. It is possible to express it in the form of eigenvector and eigenvalues as follow:
+$$G_{pq}=\sum^n_{j=1}\varphi_j(p)\varphi_j(q)e^{\lambda_j}$$
+```{r}
+communicabiliy<- function(A){
+  spectra = eigen(A)
+  d = spectra$values
+  P = spectra$vectors
+  G=0
+
+  for(i in 1:length(d)){
+    phi = P[,i]/norm(P[,i],"2")
+    temp = phi%*%t(phi)*exp(d[i])
+    G = G + temp
+  }
+  rownames(G)= rownames(A)
+  colnames(G)= colnames(A)
+  return(G)
+}
+communicabiliy(A)
+```
+Communicability weighted given the number of nodes in the nwt $$G_{pq}=\sum^n_{j=1}\varphi_j(p)\varphi_j(q)(1+\frac{\lambda_j}{n})^{-1}$$
+```{r}
+communicabiliy_G<- function(A){
+  n = sum(A)
+  d = eigen(A)$values
+  P = eigen(A)$vectors
+  G=0
+  for(i in 1:length(d)){
+    phi = P[,i]/norm(P[,i],"2")
+    temp = phi%*%t(phi)*(1 - d[i]/n)**-1
+    G = G + temp
+  }
+  rownames(G)= rownames(A)
+  colnames(G)= colnames(A)
+  return(G)
+}
+communicabiliy_G(A)
+```
+####Now on the real matrix
+
+Do apply this method we need to have a square matrix. This might be probelmatic, for exemple the connectance of the bipartie form and unipartie form are not the same.
+**A interesting idea could be to apply this kind of method to non-square matrix (if possible)**
+```{r}
+uni_ntw_trefle = matrix.associations.uni(trefle$virus, trefle$host)
+sum(uni_ntw_trefle)/(ncol(uni_ntw_trefle)*nrow(uni_ntw_trefle))
+```
+First idea with the use of the first eigenvalue weight path length
+```{r}
+importance_matrix = link.importance(uni_ntw_trefle,deepness= 5)
+
+imputed_associations_10000$importance = 0
+for(n in 1:nrow(imputed_associations_10000)){
+  ID = c(which(rownames(importance_matrix) == imputed_associations_10000$virus[n]),
+         which(colnames(importance_matrix) == imputed_associations_10000$host[n]))
+  imputed_associations_10000$importance[n] = importance_matrix[ID[1],ID[2]]
+}
+```
+2nd approach with exponential of A
+```{r}
+G_trefle = communicabiliy(uni_ntw_trefle)
+C_trefle = communicabiliy_G(uni_ntw_trefle)
+str(G_trefle)
+imputed_associations_10000$communicabiliy_spectre = 0
+imputed_associations_10000$communicabiliy_spectr_G = 0
+for(n in 1:nrow(imputed_associations_10000)){
+  ID = c(which(rownames(G_trefle) == imputed_associations_10000$virus[n]),
+         which(colnames(G_trefle) == imputed_associations_10000$host[n]))
+  imputed_associations_10000$communicabiliy_spectre[n] = G_trefle[ID[1],ID[2]]
+  imputed_associations_10000$communicabiliy_spectre_G[n] = C_trefle[ID[1],ID[2]]
+}
+ggplot(imputed_associations_10000)+
+  geom_point(aes(communicabiliy_spectre,communicabiliy_spectre_G))
+sum(C_trefle)
+
+```
+
+```{r}
+ggplot(imputed_associations_10000, aes(importance,communicabiliy_spectre))+
+  geom_point()
+
+g5=ggplot(imputed_associations_10000, aes(communicabiliy_spectre_G,P))+
+  geom_bin2d()+
+  geom_smooth()
+g6=ggplot(imputed_associations_10000, aes(communicabiliy_spectre,evidence))+
+  geom_bin2d()+
+  geom_smooth()
+g7=ggplot(imputed_associations_10000, aes(communicabiliy_spectre,dist_L))+
+  geom_bin2d()+
+  geom_smooth(method = "lm")
+g8=ggplot(imputed_associations_10000, aes(importance,dist_R))+
+  geom_bin2d()+
+  geom_smooth()
+
+ggarrange(g5,g6,g7,g8)
+
+ggplot(imputed_associations_10000, aes(importance,communicabiliy_spectre))+
+  geom_bin2d()+
+  geom_smooth()
+ggplot(imputed_associations_10000, aes(importance,frobenius_norm_L))+
+  geom_bin2d()+
+  geom_smooth()
+ggplot(imputed_associations_10000, aes(communicabiliy_spectre,frobenius_norm_L))+
+  geom_bin2d()+
+  geom_smooth()
+
+fit_fnorm_G = lm(communicabiliy_spectre~frobenius_norm_L+frobenius_norm_R, data =imputed_associations_10000 )
+plot(fit_fnorm_G)
+str(imputed_associations_10000)
+with(imputed_associations_10000,
+     plot3d(frobenius_norm_L,
+          frobenius_norm_R, 
+       communicabiliy_spectre, xlab = "frobenius norm L" ,
+       ylab = "frobenius norm R", zlab ="communicabiliy"))
+
+planes3d(fit_fnorm_G$coefficients[2],fit_fnorm_G$coefficients[3], -1, fit_fnorm_G$coefficients[1],
+         alpha = 0.5, col = "blue")
+
+```
+
+#####Comunicability with probabilistique ntw
+
+```{r}
+
+imputed_associations = read.csv("artifacts/imputed_associations.csv", stringsAsFactors = T)
+
+uni_ntw_trefle_p = uni_ntw_trefle
+for(n in 1:nrow(imputed_associations)){
+  ID = c(which(rownames(uni_ntw_trefle) == imputed_associations$virus[n]),
+         which(colnames(uni_ntw_trefle) == imputed_associations$host[n]))
+  uni_ntw_trefle_p[ID[1],ID[2]] = imputed_associations$P[n] 
+  uni_ntw_trefle_p[ID[2],ID[1]] = imputed_associations$P[n] #symmetry of the ntw
+  
+}
+all(rowSums(uni_ntw_trefle_p) == rowSums(uni_ntw_trefle_p)) # symmetry OK
+
+```
+```{r}
+library(igraph)
+
+grh1 = graph_from_adjacency_matrix(uni_ntw_trefle_p)
+V(grh1)$label <- NA
+E(grh1)$arrow.mode <- 0
+V(grh1)$size <- 8
+l = layout_on_sphere(grh1)
+str(grh1)
+plot(grh1,edge.arrow.size=.2)
+
+```
+
+```{r}
+
+A= matrix(c(0,1,1,0,1,1,1,
+              1,0,0,0,1,0,1,
+              1,0,0,1,0,0,0,
+              1,1,0,1,0,0,0,
+              0,0,1,0,1,0,1,
+              1,1,0,1,0,0,1,
+              1,0,0,0,0,0,1), nrow =7, ncol =7)
+A=A == t(A) 
+diag(A) = 0
+A[5,6] = 0
+A[7,1] = 0
+A[6,5] = 0
+A[1,7] = 0
+A = A%*%t(A) >=1
+A = A
+A = matrix(c(0,0,1,0,
+                0,0,1,1,
+                1,1,0,0,
+                0,1,0,0), nrow =4, ncol =4)
+A_prob = A
+A_prob= matrix(c(0,0,0.5,0,
+                0,0,1,1,
+                0.5,1,0,0,
+                0,1,0,0), nrow =4, ncol =4)
+trefle_norm = diag(colSums(uni_ntw_trefle)**(-1/2))%*%
+  uni_ntw_trefle%*%
+  diag(colSums(uni_ntw_trefle)**(-1/2))
+
+communicabiliy_weight<- function(A,A_prob){
+  # take the adjacency matrix and the weighted adjancy matrix as argument
+  deg = colSums(A)#degree of each nodes
+  A_norm = A
+  A_norm = diag(deg**(-1/2)) %*% A_prob %*% diag(deg**(-1/2)) ## normalisation of weighted A
+
+  spectre = eigen(A_norm)
+  d = spectre$values
+  P = spectre$vectors
+  G=0
+  for(i in 1:length(d)){
+    phi = P[,i]/norm(P[,i],"2")
+    temp = phi%*%t(phi)*exp(d[i])
+    G = G + temp
+  }
+  rownames(G)= rownames(A)
+  colnames(G)= colnames(A)
+  return(G)
+}
+
+plot(as.vector(communicabiliy_weight(A, A)),as.vector(communicabiliy(A)))
+communicabiliy(A)
+link.importance.2(A,15)
+G_trefle_w_edge = communicabiliy_weight(uni_ntw_trefle, uni_ntw_trefle_p)
+G_trefle_normalized =  communicabiliy_weight(uni_ntw_trefle, uni_ntw_trefle)
+
+imputed_associations_10000$communicabiliy_weight_edge = 0
+imputed_associations_10000$communicabiliy_normalized = 0
+
+for(n in 1:nrow(imputed_associations_10000)){
+  ID = c(which(rownames(G_trefle_w_edge) == imputed_associations_10000$virus[n]),
+         which(colnames(G_trefle_w_edge) == imputed_associations_10000$host[n]))
+  imputed_associations_10000$communicabiliy_weight_edge[n] = G_trefle_w_edge[ID[1],ID[2]]
+  imputed_associations_10000$communicabiliy_normalized[n] = G_trefle_normalized[ID[1],ID[2]]
+  
+}
+
+ggplot(imputed_associations_10000, aes(communicabiliy_normalized,communicabiliy_spectre))+
+   geom_point(aes(col =P))
+  geom_smooth(method = "lm")
+ggplot(imputed_associations_10000,aes(communicabiliy_weight_edge,communicabiliy_normalized) )+
+  geom_point(aes(col =P))+
+  geom_abline()+
+  geom_smooth(method = "lm")
+ggplot(imputed_associations_10000,aes(communicabiliy_spectre,communicabiliy_normalized) )+
+  geom_point(aes(col =P))
+  geom_smooth(method = "lm")
+ggplot(imputed_associations_10000, aes(communicabiliy_weight_edge,P))+
+  geom_bin2d()+
+  geom_smooth(method = "lm")
+str(imputed_associations_10000)
+ggplot(imputed_associations_10000, aes(communicabiliy_normalized,dist_elementwise_L))+
+  geom_bin2d()+
+  geom_smooth(method = "lm")
+ggplot(imputed_associations_10000, aes(communicabiliy_spectre,frobenius_norm_L))+
+  geom_bin2d()+
+  geom_smooth(method = "lm")
+
+```
+```{r}
+str(imputed_associations_10000)
+imputed_associations_10000$HostFamily = 0
+imputed_associations_10000$VirusFamily = 0
+for(n in 1:nrow(imputed_associations_10000)){
+  ID_host = clover$Host ==  as.character(imputed_associations_10000$host[n])
+  imputed_associations_10000$HostFamily[n] = clover[which(ID_host)[1],]$HostFamily
+  
+  ID_virus = clover$Virus ==  as.character(imputed_associations_10000$virus[n])
+  imputed_associations_10000$VirusFamily[n] = clover[which(ID_virus)[1],]$VirusFamily
+  
+}
+ggplot(imputed_associations_10000, aes(HostFamily, VirusFamily))+
+  geom_tile(aes(z=communicabiliy_spectre))
+
+```
+
+```{r}
+cluster.g = function(A){
+  spectre = eigen(A)
+  d = spectre$values
+  P = spectre$vectors
+
+  phi = P[,2]/norm(P[,2],"2")
+  return(phi%*%t(phi)*exp(d[2])+phi%*%t(phi)*exp((1/100)*d[2]))
+}
+cust = cluster.g(A)
+communi = communicabiliy(A)
+communi_norm = communicabiliy_weight(A,A)
+grh1 = graph_from_adjacency_matrix(A)
+grh2 = graph.adjacency(cust, weighted=TRUE, mode="lower")
+grh3 = graph.adjacency(communi, weighted=TRUE, mode="lower")
+grh4 = graph.adjacency(communi_norm, weighted=TRUE, mode="lower")
+
+
+
+par(mfrow = c(2,2))
+plot(grh1,edge.arrow.size=.2)
+plot(grh2,edge.width=abs(E(grh2)$weight),layout=layout_in_circle,
+     edge.color=ifelse(cust > 0, "blue","red"))
+plot(grh3,edge.width=abs(E(grh3)$weight),layout=layout_in_circle,
+     edge.color=ifelse(communi > 0, "blue","red"))
+plot(grh4,edge.width=abs(E(grh4)$weight)*4,layout=layout_in_circle,
+     edge.color=ifelse(communi_norm > 0, "blue","red"))
+```
+### Comunicability difference
+```{r}
+imputed_associations_10000$communicabiliy_diff = 0
+n= 1
+library(RSpectra)
+for(n in 1:nrow(imputed_associations_10000)){
+ 
+  ID = c(which(rownames(uni_ntw_trefle) == imputed_associations_10000$virus[n]),
+               which(colnames(uni_ntw_trefle) == imputed_associations_10000$host[n]))
+ 
+  uni_ntw_trefle[ID[1],ID[2]] = 0 # change the interaction
+  uni_ntw_trefle[ID[2],ID[1]]  = 0
+  G_temp = communicabiliy(uni_ntw_trefle)
+  uni_ntw_trefle[ID[1],ID[2]] = 1 # remove the change
+  uni_ntw_trefle[ID[2],ID[1]]  = 1
+  communicabiliy_diff = imputed_associations_10000$communicabiliy_spectre[n] - G_temp[ID[1],ID[2]]
+}
+```
+
+
+
+
