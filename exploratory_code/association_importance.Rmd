@@ -14,6 +14,7 @@ library(tidyverse)
 library(ggpubr)
 library(svd)
 library(rgl)
+library(igraph)
 ```
 
 ```{r}
@@ -485,7 +486,7 @@ all(rowSums(uni_ntw_trefle_p) == rowSums(uni_ntw_trefle_p)) # symmetry OK
 ```
 
 ```{r}
-library(igraph)
+
 
 grh1 = graph_from_adjacency_matrix(uni_ntw_trefle_p)
 V(grh1)$label <- NA
