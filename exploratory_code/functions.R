@@ -1,3 +1,5 @@
+normalized = function(x) (x-min(x))/(max(x)-min(x))
+
 ##### From row ntw to matrice ntw (bipartie => non_square)
 matrix.associations = function(Virus, Host){
   long_df = data.frame(Virus = Virus, Host = Host) 
@@ -59,12 +61,13 @@ svd.rpd <-function(ntw){
   return(list(L = L,t_R = t_R, egein_V = egein_V))
 }
 ##### Communicability combute with spectra of the A matrix
-communicabiliy<- function(A){
-  spectra = eigen(A)
+communicability<- function(A, spectra = NULL){
+  if(is.null(spectra)){
+    spectra = eigen(A)
+  }
   d = spectra$values
   P = spectra$vectors
   G=0
-  
   for(i in 1:length(d)){
     phi = P[,i]/norm(P[,i],"2")
     temp = phi%*%t(phi)*exp(d[i])

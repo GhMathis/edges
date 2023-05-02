@@ -1,8 +1,5 @@
 library(tidyverse)
-library(ggpubr)
 library(svd)
-library(rgl)
-library(igraph)
 
 source("exploratory_code/functions.R")
 
@@ -14,10 +11,11 @@ ntw_trefle = matrix.associations(Virus = trefle$virus, Host = trefle$host)
 ##### 1000 interaction for testing /!\to be removed/!\
 set.seed(1000)
 ID = sample(nrow(clover), 1000)
-clover = clover[ID, ]
+clover_subset = clover[ID, ]
 #####
 
-ID_trefle = which( paste(trefle$virus, trefle$host) %in% paste(clover$Virus, clover$Host))
+ID_trefle = which( paste(trefle$virus, trefle$host) %in% 
+                     paste(clover_subset$Virus, clover_subset$Host))
 length(ID_trefle) # lot od dipicate in clover (mutiple publications for same assocations)
 
 shared_asso = trefle[ID_trefle, ]
@@ -62,7 +60,7 @@ all_norm = data.frame(O_diff_clover_L = O_diff_clover_L,
                       O_diff_trefle_L = O_diff_trefle_L,
                       O_diff_trefle_R = O_diff_trefle_R,
                       shared_asso)
-normalized = function(x) (x-min(x))/(max(x)-min(x))
+
 
 all_norm = data.frame(sapply(all_norm[,1:4], normalized),shared_asso )
 str(all_norm)
@@ -73,3 +71,4 @@ ggplot(all_norm)+
   geom_point(aes(O_diff_clover_R,O_diff_trefle_R))+
   geom_abline(intercept = 0,slope = 1, col="red")
 
+write.csv(all_norm, "exploratory_output/all_norm_svd_subset.csv")
