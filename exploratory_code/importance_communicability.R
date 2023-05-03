@@ -62,9 +62,28 @@ for(n in 1: nrow(shared_asso)){
   
 }
 importance_df = data.frame(importance_trefle,importance_clover,shared_asso)
+
 str(importance_df)
-write.csv(importance_df, "importance_df")
+write.csv(importance_df, "exploratory_output/importance_df.csv")
+
+
+G_trefle_norm = normalized(G_trefle)
+G_clover_norm = normalized(G_clover)
+G_trefle_share = vector(length = nrow(shared_asso))
+G_clover_share = vector(length = nrow(shared_asso))
+
+for(n in 1: nrow(shared_asso)){
+  ID_virus = which(row.names(uni_ntw_clover) == shared_asso$virus[n])  
+  ID_host = which(colnames(uni_ntw_clover) == shared_asso$host[n]) 
+  G_trefle_share[n] = G_trefle_norm[ID_virus,ID_host]
+  G_clover_share[n] = G_clover_norm[ID_virus,ID_host]
+}
+
+communicability_df = data.frame(G_trefle_share, G_clover_share, shared_asso)
+write.csv(communicability_df, "exploratory_output/communicability_shared_edges_df.csv")
+
 ggplot(importance_df)+
   geom_point(aes(importance_clover,importance_trefle))
-
+ggplot(communicability_df)+
+  geom_point(aes(G_clover_share,G_trefle_share))
 
