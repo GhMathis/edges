@@ -32,8 +32,9 @@ G_clover = communicability(uni_ntw_clover)
 str(G_clover)
 importance_trefle = vector(length = nrow(shared_asso))             
 importance_clover = vector(length = nrow(shared_asso))  
-n= 0
+
 for(n in 1: nrow(shared_asso)){
+  print(n)
   ID_virus = which(row.names(uni_ntw_clover) == shared_asso$virus[n])  
   ID_host = which(colnames(uni_ntw_clover) == shared_asso$host[n]) 
   
@@ -53,6 +54,8 @@ for(n in 1: nrow(shared_asso)){
   ###### /!\ might need a normalzation step here to compare both G_delta
   G_delta_trefle = normalized(G_delta_trefle)
   G_delta_clover = normalized(G_delta_clover)
+  
+  
   importance_trefle[n] = G_delta_trefle[ID_virus,ID_host]
   importance_clover[n] = G_delta_clover[ID_virus,ID_host]
   #share_eigen_T_C = c(E_temp_trefle = E_temp_trefle, E_temp_clover = E_temp_clover)
