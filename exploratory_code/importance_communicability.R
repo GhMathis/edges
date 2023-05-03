@@ -31,7 +31,8 @@ G_trefle = communicability(uni_ntw_trefle)
 G_clover = communicability(uni_ntw_clover)
 str(G_clover)
 importance_trefle = vector(length = nrow(shared_asso))             
-importance_clover = vector(length = nrow(shared_asso))     
+importance_clover = vector(length = nrow(shared_asso))  
+n= 0
 for(n in 1: nrow(shared_asso)){
   ID_virus = which(row.names(uni_ntw_clover) == shared_asso$virus[n])  
   ID_host = which(colnames(uni_ntw_clover) == shared_asso$host[n]) 
@@ -48,7 +49,7 @@ for(n in 1: nrow(shared_asso)){
   uni_ntw_clover[ID_host,ID_virus] = 1
   
   G_delta_trefle = G_trefle-G_zeta_trefle
-  G_delta_clover = G_clover-G_zeta_clover[ID_host,ID_virus]
+  G_delta_clover = G_clover-G_zeta_clover
   ###### /!\ might need a normalzation step here to compare both G_delta
   G_delta_trefle = normalized(G_delta_trefle)
   G_delta_clover = normalized(G_delta_clover)
