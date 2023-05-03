@@ -1,0 +1,122 @@
+---
+title: "visualisation"
+author: "MG"
+date: "2023-05-03"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+setwd("~/Fac/Master_Rennes/stage1/edges")
+
+library(tidyverse)
+library(ggpubr)
+library(igraph)
+library(RColorBrewer)
+```
+
+```{r}
+main_theme = theme_bw()+
+  theme(line = element_blank(), 
+        axis.line = element_line(colour = "black"),
+        panel.border = element_blank(),
+        axis.ticks =  element_line(colour = "black"),
+        axis.text.x = element_text(colour = "black", size=17),
+        axis.text.y = element_text(colour = "black", size=17),
+        legend.title = element_text(colour = "black", size=17),
+        legend.text = element_text(colour = "black", size=15),
+        axis.title=element_text(size=15))
+```
+
+```{r}
+importance_df = read.csv("exploratory_output/importance_df.csv",
+                         stringsAsFactors = T)
+all_norm_svd = read.csv("exploratory_output/all_norm_svd_subset.csv",
+                        stringsAsFactors = T)
+communicability_shared_edges_df = read.csv("exploratory_output/communicability_shared_edges_df.csv",
+                                           stringsAsFactors = T)
+str(importance_df)
+str(all_norm_svd)
+str(communicability_shared_edges_df)
+all_data = importance_df%>%
+  left_join(all_norm_svd,by = c("X","virus","host") )%>%
+  left_join(communicability_shared_edges_df,by = c("X","virus","host") )
+str(all_data)
+```
+## Check the link between the importance metrique(I) and the communicability (G)
+$$G=\sum^n_{j=1}\varphi_j\varphi_j^Te^{\lambda_j}$$
+with $\varphi_j = $eigenvector associate with the eigenvalue j
+
+$$I = G - \zeta G$$
+$\zetaG$ is the comunicability with a small modification in the ntw (eg. an edge remove)
+```{r}
+clover_G_I = ggplot(all_data)+
+  geom_point(aes(G_clover_share, importance_clover))+
+  xlab("Communicability of share edge") + ylab("importance of share edge")+
+  main_theme
+trefle_G_I = ggplot(all_data)+
+  geom_point(aes(G_trefle_share, importance_trefle))+
+  xlab("Communicability of share edge") + ylab("importance of share edge")+
+  main_theme
+
+ggarrange(clover_G_I,trefle_G_I, labels = c("clover","trefle"),ncol = 2)
+```
+
+Normalisation of the dat aare problematic here. On the graphs we are looking at : 
+$$I_{pq} = |G_{pq} - \zeta G_{pq}|_1$$
+It's fair to supose that most of the time when an edge connecting p-q is remove, the most impacted $\zeta G$ will be $\zeta G_{pq}$. **It will deacrease strongly $\zeta G_{pq}$**.
+So, knowing that the perturbation is always done by removing the edge p-q that we observe, most of the time the  $|G - \zeta G|_1$ normalization will have as max  $G_{pq} - \zeta G_{pq}$ **beacause $\zeta G_{pq}$ is small while other $\zeta G_{ij} are big (because less impacted by the remove) **. The result is that the difference will most of the time make the $I_{pq}$ big because  $G_{pq} - \zeta G_{pq} \approx G_{pq}$ when the number of edge connected to q and p are small. So because of this will always over estimate the true importance of the p-q edge with small connection
+
+```{r}
+I_clover_1 = all_data%>%
+  filter(importance_clover==1)%>%
+  select(host,virus)
+all_data%>%
+  filter(host=="Pusa hispida")
+
+I_clover_1 = c(as.character(I_clover_1$virus), 
+               as.character(I_clover_1$host))
+grh_clover = graph_from_adjacency_matrix(uni_ntw_clover,mode = "undirected")
+
+V(grh_clover)$name[!(V(grh_clover)$name %in% c("Pusa hispida","Phocid alphaherpesvirus 1"))] = NA
+plot(grh_clover,edge.arrow.size=.2, vertex.size=1,vertex.label=V(grh_clover)$media,
+      vertex.label.cex = .4, vertex.label.color="gray40")
+grh_clover = graph_from_adjacency_matrix(uni_ntw_clover,mode = "undirected")
+V(grh_clover)$name[!(V(grh_clover)$name %in% I_clover_1)] = NA
+
+plot(grh_clover,edge.arrow.size=.2, vertex.size=1,vertex.label=V(grh_clover)$media,
+      vertex.label.cex = 2, vertex.label.color="gray40",
+     edge.color=ifelse(cust > 0, "blue","red"))
+
+test = all_data%>%
+  select(host,virus,importance_clover)
+
+gg <- graph.data.frame(test,directed=FALSE)
+
+display.brewer.all()
+
+brewer.pal(n=9,name ="YlOrRd" )[4:8]
+edge_color = ifelse(test$importance_clover==1, "blue",
+              ifelse(test$importance_clover==0, brewer.pal(n=9,name ="YlOrRd" )[3],
+               ifelse(test$importance_clover<0.25, brewer.pal(n=9,name ="YlOrRd" )[5],
+                ifelse(test$importance_clover<0.75, brewer.pal(n=9,name ="YlOrRd" )[6],
+                 brewer.pal(n=9,name ="YlOrRd" )[7])
+               )))
+               
+plot(gg, vertex.size=1,vertex.label=V(grh_clover)$media,
+      vertex.label.cex = 2, vertex.label.color="black",edge.width = 8,
+     edge.label=round(test$importance_clover,2),edge.label.cex = 2,
+     edge.color = edge_color)
+
+```
+
+Conclusion ,the metric "I" don't behave as expected for the isolated species and for the "tip species" = that have only one egde
+
+
+
+

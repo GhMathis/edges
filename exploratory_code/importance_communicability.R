@@ -28,6 +28,7 @@ grh_trefle= graph_from_adjacency_matrix(uni_ntw_trefle,mode = "undirected")
 plot(grh_trefle,edge.arrow.size=.2,vertex.label=NA, vertex.size=.01)
 
 G_trefle = communicability(uni_ntw_trefle)
+plot(as.vector(G_trefle),as.vector( G_trefle))
 G_clover = communicability(uni_ntw_clover)
 str(G_clover)
 importance_trefle = vector(length = nrow(shared_asso))             
