@@ -36,6 +36,8 @@ main_theme = theme_bw()+
 ```{r}
 importance_df = read.csv("exploratory_output/importance_df.csv",
                          stringsAsFactors = T)
+communicability_df = read.csv("output/communicability_df.csv",
+                         stringsAsFactors = T)
 all_norm_svd = read.csv("exploratory_output/all_norm_svd_subset.csv",
                         stringsAsFactors = T)
 communicability_shared_edges_df = read.csv("exploratory_output/communicability_shared_edges_df.csv",
@@ -72,7 +74,7 @@ $$I_{pq} = |G_{pq} - \zeta G_{pq}|_1$$
 It's fair to supose that most of the time when an edge connecting p-q is remove, the most impacted $\zeta G$ will be $\zeta G_{pq}$. **It will deacrease strongly $\zeta G_{pq}$**.
 So, knowing that the perturbation is always done by removing the edge p-q that we observe, most of the time the  $|G - \zeta G|_1$ normalization will have as max  $G_{pq} - \zeta G_{pq}$ **beacause $\zeta G_{pq}$ is small while other $\zeta G_{ij} are big (because less impacted by the remove) **. The result is that the difference will most of the time make the $I_{pq}$ big because  $G_{pq} - \zeta G_{pq} \approx G_{pq}$ when the number of edge connected to q and p are small. So because of this will always over estimate the true importance of the p-q edge with small connection
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 I_clover_1 = all_data%>%
   filter(importance_clover==1)%>%
   select(host,virus)
@@ -117,6 +119,115 @@ plot(gg, vertex.size=1,vertex.label=V(grh_clover)$media,
 
 Conclusion ,the metric "I" don't behave as expected for the isolated species and for the "tip species" = that have only one egde
 
+```{r include=FALSE}
+grh_clover = graph_from_adjacency_matrix(uni_ntw_clover,mode = "undirected")
+max(all_data$G_trefle_share)
+edge_color2 = ifelse(all_data$G_clover_share>=0.75, "blue",
+              ifelse(all_data$G_clover_share<0.25, brewer.pal(n=9,name ="YlOrRd" )[3],
+               ifelse(all_data$G_clover_share<0.5, brewer.pal(n=9,name ="YlOrRd" )[5],
+                ifelse(all_data$G_clover_share<0.75, brewer.pal(n=9,name ="YlOrRd" )[6],
+                 brewer.pal(n=9,name ="YlOrRd" )[7])
+               )))
+plot(grh_clover, vertex.size=1,vertex.label=V(grh_clover)$media,
+      vertex.label.cex = 2, vertex.label.color="black",edge.width = 8,
+     edge.label=round(all_data$G_trefle_share,2),edge.label.cex = 2,
+     edge.color = edge_color2)
 
 
+```
 
+```{r}
+head(all_data)
+gg_svd_L = ggplot(all_data)+
+  geom_point(aes(O_diff_clover_L ,O_diff_trefle_L ))+
+  xlab("SVD clover") + ylab("SVD trefle")+
+  geom_abline(intercept= 0, slope = 1, "blue")+
+  main_theme
+gg_svd_R = ggplot(all_data)+
+  geom_point(aes(O_diff_clover_R, O_diff_trefle_R))+
+  xlab("SVD clover") + ylab("SVD trefle")+
+  geom_abline(intercept= 0, slope = 1, "blue")+
+  main_theme
+gg_G = ggplot(all_data)+
+  geom_point(aes( G_clover_share , G_trefle_share ))+
+  xlab("communicabilité clover") + ylab("communicabilité trefle")+
+  geom_abline(intercept= 0, slope = 1, "blue")+
+  main_theme
+gg_I = ggplot(all_data)+
+  geom_point(aes( importance_clover , importance_trefle))+
+  xlab("importance clover") + ylab("importance trefle")+
+  geom_abline(intercept= 0, slope = 1, "blue")+
+  main_theme
+ggarrange(gg_svd_L,gg_svd_R, gg_G, gg_I, labels = c("SVD","SVD","Communicabilité", "Communicabilité diff |G - zeta(G)|"),ncol = 2, nrow = 2)
+```
+
+```{r}
+head(communicability_df)
+ggplot(communicability_df)+
+  geom_point(aes(G_pq_trefle_nrmlz, G_pq_zeta_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(G_pq_clover_nrmlz, G_pq_zeta_clover_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(importance_clover_nrmlz,importance_trefle_nrmlz ))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_clover_nrmlz,f_norm_G_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_clover,f_norm_G_trefle))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+communicability_df[communicability_df$f_norm_G_trefle_nrmlz>0.5,]
+```
+
+```{r include=FALSE}
+grh_trefle = graph_from_adjacency_matrix(uni_ntw_trefle,mode = "undirected")
+sum(uni_ntw_trefle)/2
+max(all_data$G_trefle_share)
+str(summary(communicability_df$importance_trefle_nrmlz))
+temp = 
+
+ID_share_edges = which(paste(as_edgelist(grh_trefle, names=T)[,1],as_edgelist(grh_trefle, names=T)[,2]) %in% paste(as_edgelist(grh_clover, names=T)[,1],as_edgelist(grh_clover, names=T)[,2]))
+
+I_nomr_trfl = communicability_df$importance_trefle_nrmlz
+edge_color_share = ifelse(I_nomr_trfl>=max(I_nomr_trfl) - max(I_nomr_trfl)*0.01 , "blue",
+              ifelse(communicability_df$importance_trefle_nrmlz==0, brewer.pal(n=9,name ="YlOrRd" )[2],
+               ifelse(I_nomr_trfl<max(I_nomr_trfl) - max(I_nomr_trfl)*0.2, brewer.pal(n=9,name ="YlOrRd" )[6],
+                ifelse(I_nomr_trfl<max(I_nomr_trfl) - max(I_nomr_trfl)*0.1, brewer.pal(n=9,name ="YlOrRd" )[7],
+                 brewer.pal(n=9,name ="YlOrRd" )[9])
+               )))
+edge_color_trefle = rep("gray80",length(E(grh_trefle)))
+edge_color_trefle[ID_share_edges] <- edge_color_share
+
+edge_width_trefle = rep(8,length(E(grh_trefle)))
+edge_width_trefle[-ID_share_edges] =NA
+layout.auto()
+##### Edges value from trefle
+lay = layout.auto(grh_clover)
+plot(grh_trefle, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = edge_width_trefle,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = edge_color_trefle)
+plot(grh_clover, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = 8,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = edge_color_share, layout = lay)
+##### Edges value from clover
+I_nomr_clvr = communicability_df$importance_clover_nrmlz
+edge_color_share2 = ifelse(I_nomr_clvr>=max(I_nomr_trfl) - max(I_nomr_trfl)*0.01 , "blue",
+              ifelse(I_nomr_clvr==0, brewer.pal(n=9,name ="YlOrRd" )[2],
+               ifelse(I_nomr_clvr<max(I_nomr_trfl) - max(I_nomr_trfl)*0.2, brewer.pal(n=9,name ="YlOrRd" )[6],
+                ifelse(I_nomr_clvr<max(I_nomr_trfl) - max(I_nomr_trfl)*0.1, brewer.pal(n=9,name ="YlOrRd" )[7],
+                 brewer.pal(n=9,name ="YlOrRd" )[9])
+               )))
+plot(grh_clover, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = 8,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = edge_color_share2, layout = lay)
+```
