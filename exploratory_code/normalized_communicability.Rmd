@@ -4,7 +4,7 @@ author: "MG"
 date: "2023-05-03"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -18,6 +18,7 @@ library(tidyverse)
 library(ggpubr)
 library(igraph)
 library(RColorBrewer)
+source("exploratory_code/functions.R")
 ```
 
 ```{r}
@@ -36,7 +37,7 @@ main_theme = theme_bw()+
 ```{r}
 importance_df = read.csv("exploratory_output/importance_df.csv",
                          stringsAsFactors = T)
-communicability_df = read.csv("output/communicability_df.csv",
+communicability_df = read.csv("exploratory_output/communicability_df.csv",
                          stringsAsFactors = T)
 all_norm_svd = read.csv("exploratory_output/all_norm_svd_subset.csv",
                         stringsAsFactors = T)
@@ -135,7 +136,7 @@ plot(grh_clover, vertex.size=1,vertex.label=V(grh_clover)$media,
 
 
 ```
-
+### Old version of communicability and importance with the bad normalisation explain above
 ```{r}
 head(all_data)
 gg_svd_L = ggplot(all_data)+
@@ -159,10 +160,34 @@ gg_I = ggplot(all_data)+
   geom_abline(intercept= 0, slope = 1, "blue")+
   main_theme
 ggarrange(gg_svd_L,gg_svd_R, gg_G, gg_I, labels = c("SVD","SVD","Communicabilité", "Communicabilité diff |G - zeta(G)|"),ncol = 2, nrow = 2)
+gg_G = ggplot(all_data)+
+  geom_point(aes( G_clover_share , G_trefle_share ))+
+  xlab("communicabilité clover") + ylab("communicabilité trefle")+
+  geom_abline(intercept= 0, slope = 1, "blue")+
+  main_theme
 ```
-
+### Communicability and importance differente metrics
+Communicability_df was produce by the *"communicability_parallel_process.R"* function.
 ```{r}
-head(communicability_df)
+str(communicability_df)
+str(communicability_df_long)
+
+ggplot(communicability_df)+
+  geom_point(aes(normalized(G_pq_clover), normalized(G_pq_trefle)))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+
+### Better to look at the importance than the *zeta* communicability when we compare trefle and clover on a scatter plot because the communicability distribution isn't the same in both network resulting in an occultation of the effect the perturbation. Moreover *zeta* communicability is the opposite of the link importance, it is all the noise that we want to get ride of when we do the substration to obtaine I.
+ggplot(communicability_df)+
+  geom_point(aes(G_pq_zeta_clover_nrmlz, G_pq_zeta_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+
+### zeta G ~ G for colver and trefle, we expect that no point will be above the 1:1 line, this is what we observe so every think seems correct. The points that are far below the line should represent the most importante interactions. 
 ggplot(communicability_df)+
   geom_point(aes(G_pq_trefle_nrmlz, G_pq_zeta_trefle_nrmlz))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
@@ -171,20 +196,91 @@ ggplot(communicability_df)+
   geom_point(aes(G_pq_clover_nrmlz, G_pq_zeta_clover_nrmlz))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
   main_theme
+
 ggplot(communicability_df)+
   geom_point(aes(importance_clover_nrmlz,importance_trefle_nrmlz ))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
   main_theme
 ggplot(communicability_df)+
   geom_point(aes(f_norm_G_clover_nrmlz,f_norm_G_trefle_nrmlz))+
-  geom_abline(intercept= 0, slope = 1, col = "blue")+
   main_theme
 ggplot(communicability_df)+
   geom_point(aes(f_norm_G_clover,f_norm_G_trefle))+
-  geom_abline(intercept= 0, slope = 1, col = "blue")+
   main_theme
 communicability_df[communicability_df$f_norm_G_trefle_nrmlz>0.5,]
 ```
+### Histograme des varaible les plis intersantes
+```{r}
+str(communicability_df)
+G_nrmlz_subset = communicability_df %>%
+  select(c(virus, host, X, G_pq_clover_nrmlz, G_pq_trefle_nrmlz))%>%
+  pivot_longer(-c(virus, host, X),values_to ="G_nrmlz")
+
+hist_G = ggplot(G_nrmlz_subset)+
+  geom_density(aes(G_nrmlz, fill = name),alpha = 0.2, stat = "density")+
+  fill_palette("pastel1")+
+  main_theme+
+  scale_fill_discrete(name = "Network", labels = c("clover", "trefle"))+
+  labs(x ="Communicability (G)", y= "Density") 
+
+I_nrmlz_subset = communicability_df %>%
+  select(c(virus, host, X, importance_trefle_nrmlz, importance_clover_nrmlz))%>%
+  pivot_longer(-c(virus, host, X),values_to ="I_nrmlz")
+
+str(G_nrmlz_subset)
+
+hist_I = ggplot(I_nrmlz_subset)+
+  geom_density(aes(I_nrmlz, fill = name),alpha = 0.2, stat = "density")+
+  fill_palette("pastel1")+
+  scale_fill_discrete(name = "Network", labels = c("clover", "trefle"))+
+  labs(x ="Importance", y= "Density") +
+  main_theme
+
+
+gg_G2  = ggplot(communicability_df)+
+  geom_point(aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  labs(x ="G colver", y= "G trefle")+
+  main_theme
+
+gg_I2 = ggplot(communicability_df)+
+  geom_point(aes(importance_clover_nrmlz, importance_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  labs(x ="I colver", y= "I trefle")+
+  main_theme
+ggarrange(hist_G, hist_I,gg_G2,gg_I2, ncol =2, nrow =2)
+```
+```{r}
+gg_I_F_trefle_nrmlz = ggplot(communicability_df)+
+  geom_point(aes(importance_trefle_nrmlz,f_norm_G_trefle_nrmlz ))+
+  labs(x ="I trefle", y= "f_norm trefle")+
+  main_theme
+
+gg_I_F_clover_nrmlz = ggplot(communicability_df)+
+  geom_point(aes(importance_clover_nrmlz,f_norm_G_clover_nrmlz ))+
+  labs(x ="I clover", y= "f_norm clover")+
+  main_theme
+gg_I_F_trefle = ggplot(communicability_df)+
+  geom_point(aes(importance_trefle, f_norm_G_trefle ))+
+  labs(x ="I trefle", y= "f_norm trefle")+
+  main_theme
+
+gg_I_F_clover = ggplot(communicability_df)+
+  geom_point(aes(importance_clover, f_norm_G_clover ))+
+  labs(x ="I clover", y= "f_norm clover")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_clover_nrmlz, f_norm_G_clover ))+
+  labs(x ="f_norm clover norm", y= "f_norm clover")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_trefle_nrmlz, f_norm_G_trefle ))+
+  labs(x ="f_norm clover norm", y= "f_norm clover")+
+  main_theme
+ggarrange(gg_I_F_trefle, gg_I_F_clover,gg_I_F_trefle_nrmlz, gg_I_F_clover_nrmlz)
+communicability_df[communicability_df$importance_trefle == 0 |communicability_df$importance_clover == 0,]
+```
+The distance between the forbenuis norm of the communicability and the zeta communicability is negatively correlated with the importance metric. It is more continuous and maybe capture in a more efficent way the real impact of the suppretion of the interaction. We can see in the plot I clover~f_ nrom trefle, that there is not gap for the fnorm metric,
 
 ```{r include=FALSE}
 grh_trefle = graph_from_adjacency_matrix(uni_ntw_trefle,mode = "undirected")
