@@ -36,13 +36,21 @@ class Networks(Scene):
         egde_col_pos = egde_col_pos| egde_col_pos2
         
         return(egde_col_pos)
-    
+    test = nx.gnp_random_graph(10,0.1)
+    test.nodes
+    test.edges
     def construct(self):
-        adj_arr = np.array([[0, 1, 1, 1, 1],
-                            [1, 0, 1, 0, 1],
-                            [0, 1, 0, 1, 0],
-                            [1, 0, 1, 0, 1],
-                            [1, 1, 0, 1, 0]])
+        adj_arr = np.array([[0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
+                            [1, 0, 0, 1, 0, 1, 1, 0, 1, 1],
+                            [0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
+                            [1, 1, 0, 0, 0, 0, 1, 1, 1, 1],
+                            [0, 0, 0, 0, 0, 1, 1, 0, 1, 1],
+                            [1, 1, 0, 0, 1, 0, 1, 0, 0, 0],
+                            [0, 1, 1, 1, 1, 1, 0, 0, 1, 1],
+                            [1, 0, 1, 1, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 0, 1, 1, 0, 1, 0, 0, 1],
+                            [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]])
+        
         spectra = np.linalg.eig(adj_arr)
         ##### Setup the data for visualisations
         self.adj_to_list(adj_arr)
@@ -51,22 +59,28 @@ class Networks(Scene):
         G_decomposition = lambda val, vec: np.dot(vec.T, vec)*np.exp(val)
         list_g_decomp = [G_decomposition(val, vec[np.newaxis]) for val, vec
                  in zip(spectra[0], spectra[1])]
-        
+        list_g_decomp[0] == list_g_decomp[0].T
 
         edge_col = self.egde_color(list_g_decomp[0])
         
         ##### Object creation
-        lyt = nx.bipartite_layout(self.vertices, self.vertices[:2])
-        
+        #lyt = nx.bipartite_layout(self.vertices, self.vertices[:2])
+
         meta_ntw = [Graph(vertices = self.vertices,
                          edges = self.edges,
                          labels =True,
-                         layout = "planar",
-                         edge_config = self.egde_color(g_decomp)) for g_decomp
-                    in list_g_decomp]
+                         layout = "kamada_kawai",
+                         edge_config = self.egde_color(g_decomp)).scale(0.5) for g_decomp
+                    in list_g_decomp[:5]]
+        meta_ntw2 = [Graph(vertices = self.vertices,
+                         edges = self.edges,
+                         labels =True,
+                         layout = "spectral",
+                         edge_config = self.egde_color(g_decomp)).scale(0.5) for g_decomp
+                    in list_g_decomp[:5]]
 
-        r1 = VGroup(*meta_ntw[:3]).arrange()
-        r2 = VGroup(*meta_ntw[3:]).arrange()
+        r1 = VGroup(*meta_ntw).arrange()
+        r2 = VGroup(*meta_ntw2).arrange()
         
         self.play(LaggedStart(Create(VGroup(r1,r2).arrange(direction=DOWN)),
                               run_time=3))
