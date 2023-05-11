@@ -282,6 +282,126 @@ communicability_df[communicability_df$importance_trefle == 0 |communicability_df
 ```
 The distance between the forbenuis norm of the communicability and the zeta communicability is negatively correlated with the importance metric. It is more continuous and maybe capture in a more efficent way the real impact of the suppretion of the interaction. We can see in the plot I clover~f_ nrom trefle, that there is not gap for the fnorm metric,
 
+### structure of the ntw
+#### Communicability and degree of nodes
+```{r}
+library(lattice)
+clover = read.csv("data/clover.csv", stringsAsFactors = T)
+trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
+
+##### 1000 interaction for testing /!\to be removed/!\
+set.seed(1000)
+ID = sample(nrow(clover), 1000)
+clover = clover[ID, ]
+
+trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
+#####
+
+ID_trefle = which( paste(trefle$virus, trefle$host) %in% 
+                     paste(clover$Virus, clover$Host))
+shared_asso = trefle[ID_trefle, ]
+
+
+uni_ntw_clover = matrix.associations.uni(Virus = clover$Virus, Host = clover$Host)
+uni_ntw_trefle = matrix.associations.uni(Virus = trefle$virus, Host = trefle$host)
+G_trefle = communicability(uni_ntw_trefle)
+G_clover = communicability(uni_ntw_clover)
+names(sort(colSums(uni_ntw_trefle)))
+G_trefle_order = G_trefle[names(sort(colSums(uni_ntw_trefle))),
+                          names(sort(colSums(uni_ntw_trefle)))]
+G_trefle_order_c = G_trefle[names(sort(colSums(uni_ntw_clover))),
+                          names(sort(colSums(uni_ntw_clover)))]
+G_clover_order = G_clover[names(sort(colSums(uni_ntw_clover))),
+                          names(sort(colSums(uni_ntw_clover)))]
+# A = matrix(c(0, 1, 0, 1, 0, 1, 0, 1, 1, 0,
+#                             1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
+#                             0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+#                             1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
+#                             0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+#                             1, 1, 0, 0, 1, 0, 1, 0, 0, 0,
+#                             0, 1, 1, 1, 1, 1, 0, 0, 1, 1,
+#                             1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+#                             1, 1, 0, 1, 1, 0, 1, 0, 0, 1,
+#                             0, 1, 0, 1, 1, 0, 1, 0, 1, 0), ncol = 10, nrow =10)
+# colnames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
+# rownames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
+# G_A = communicability(A)
+# G_A = G_A[names(sort(colSums(A))), names(sort(colSums(A)))]
+# levelplot(G_A)
+colnames(G_trefle_order) = sort(colSums(uni_ntw_trefle))
+rownames(G_trefle_order) = sort(colSums(uni_ntw_trefle))
+levelplot(G_trefle_order, 
+          scales=list(x=list(at=seq(1, ncol(G_trefle_order), by=10),
+                            
+                             rot=45), 
+                      y=list(at=seq(1, nrow(G_trefle_order), by=10))))
+
+
+
+levelplot(G_clover_order)
+
+
+levelplot(G_trefle_order_c)
+
+```
+#### first dim of the communicability
+
+```{r}
+spectre_trefle = eigen(uni_ntw_trefle)
+spectre_clover = eigen(uni_ntw_trefle)
+G1_trefle = spectre_trefle[[2]][1,]%*%t(spectre_trefle[[2]][1,]) * exp(spectre_trefle[[1]][1])
+G2_trefle = spectre_trefle[[2]][2,]%*%t(spectre_trefle[[2]][2,]) * exp(spectre_trefle[[1]][1])
+G3_trefle = spectre_trefle[[2]][3,]%*%t(spectre_trefle[[2]][3,]) * exp(spectre_trefle[[1]][1])
+G4_trefle = spectre_trefle[[2]][4,]%*%t(spectre_trefle[[2]][4,]) * exp(spectre_trefle[[1]][1])
+G5_trefle = spectre_trefle[[2]][5,]%*%t(spectre_trefle[[2]][5,]) * exp(spectre_trefle[[1]][1])
+
+dim1 = spectre_trefle[[2]][1,]
+dim2 = spectre_trefle[[2]][2,]
+dim3 = spectre_trefle[[2]][3,]
+dim4 = spectre_trefle[[2]][4,]
+dim5 = spectre_trefle[[2]][5,]
+names(dim1) = colnames(uni_ntw_trefle)
+names(dim2) = colnames(uni_ntw_trefle)
+names(dim3) = colnames(uni_ntw_trefle)
+names(dim4) = colnames(uni_ntw_trefle)
+names(dim5) = colnames(uni_ntw_trefle)
+
+colnames(G1_trefle) = colnames(uni_ntw_trefle)
+rownames(G1_trefle) = colnames(uni_ntw_trefle)
+colnames(G2_trefle) = colnames(uni_ntw_trefle)
+rownames(G2_trefle) = colnames(uni_ntw_trefle)
+colnames(G3_trefle) = colnames(uni_ntw_trefle)
+rownames(G3_trefle) = colnames(uni_ntw_trefle)
+colnames(G4_trefle) = colnames(uni_ntw_trefle)
+rownames(G4_trefle) = colnames(uni_ntw_trefle)
+colnames(G5_trefle) = colnames(uni_ntw_trefle)
+rownames(G5_trefle) = colnames(uni_ntw_trefle)
+
+#G1_trefle_store = G1_trefle[names(sort(colSums(uni_ntw_trefle))),
+#                          names(sort(colSums(uni_ntw_trefle)))]
+
+G1_trefle_store = G1_trefle[names(sort(dim1)),
+                          names(sort(dim1))]
+G2_trefle_store = G2_trefle[names(sort(dim2)),
+                          names(sort(dim2))]
+G3_trefle_store = G3_trefle[names(sort(dim3)),
+                          names(sort(dim3))]
+G4_trefle_store = G4_trefle[names(sort(dim4)),
+                          names(sort(dim4))]
+G5_trefle_store = G5_trefle[names(sort(dim5)),
+                          names(sort(dim5))]
+
+
+
+p1 = levelplot(G1_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p2 = levelplot(G2_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p3 = levelplot(G3_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p4 = levelplot(G4_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p5 = levelplot(G5_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+
+ggarrange(p1,p2,p3,p4,p5)
+```
+
 ```{r include=FALSE}
 grh_trefle = graph_from_adjacency_matrix(uni_ntw_trefle,mode = "undirected")
 sum(uni_ntw_trefle)/2
