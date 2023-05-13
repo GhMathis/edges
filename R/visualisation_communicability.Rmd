@@ -1,0 +1,315 @@
+---
+title: "visualisation"
+author: "MG"
+date: "2023-05-03"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+setwd("~/Fac/Master_Rennes/stage1/edges")
+
+library(tidyverse)
+library(ggpubr)
+library(igraph)
+library(RColorBrewer)
+source("R/functions.R")
+```
+
+```{r}
+main_theme = theme_bw()+
+  theme(line = element_blank(), 
+        axis.line = element_line(colour = "black"),
+        panel.border = element_blank(),
+        axis.ticks =  element_line(colour = "black"),
+        axis.text.x = element_text(colour = "black", size=17),
+        axis.text.y = element_text(colour = "black", size=17),
+        legend.title = element_text(colour = "black", size=17),
+        legend.text = element_text(colour = "black", size=15),
+        axis.title=element_text(size=15))
+```
+
+```{r}
+communicability_df = read.csv("output/communicability_df.csv",
+                         stringsAsFactors = T)
+```
+## Check the link between the importance metrique(I) and the communicability (G)
+$$G=\sum^n_{j=1}\varphi_j\varphi_j^Te^{\lambda_j}$$
+with $\varphi_j = $eigenvector associate with the eigenvalue j
+
+$$I = G - \zeta G$$
+
+### Communicability and importance differente metrics
+Communicability_df was produce by the *"communicability_parallel_process.R"* function.
+```{r}
+
+ggplot(communicability_df)+
+  geom_point(aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+
+ggplot(communicability_df)+
+  geom_point(aes(importance_clover_nrmlz,importance_trefle_nrmlz ))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_clover_nrmlz,f_norm_G_trefle_nrmlz))+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_clover,f_norm_G_trefle))+
+  main_theme
+communicability_df[communicability_df$f_norm_G_trefle_nrmlz>0.5,]
+```
+### Histograme des varaible les plis intersantes
+```{r}
+str(communicability_df)
+G_nrmlz_subset = communicability_df %>%
+  select(c(virus, host, X, G_pq_clover_nrmlz, G_pq_trefle_nrmlz))%>%
+  pivot_longer(-c(virus, host, X),values_to ="G_nrmlz")
+
+hist_G = ggplot(G_nrmlz_subset)+
+  geom_density(aes(G_nrmlz, fill = name),alpha = 0.2, stat = "density")+
+  fill_palette("pastel1")+
+  main_theme+
+  scale_fill_discrete(name = "Network", labels = c("clover", "trefle"))+
+  labs(x ="Communicability (G)", y= "Density") 
+
+I_nrmlz_subset = communicability_df %>%
+  select(c(virus, host, X, importance_trefle_nrmlz, importance_clover_nrmlz))%>%
+  pivot_longer(-c(virus, host, X),values_to ="I_nrmlz")
+
+str(G_nrmlz_subset)
+
+hist_I = ggplot(I_nrmlz_subset)+
+  geom_density(aes(I_nrmlz, fill = name),alpha = 0.2, stat = "density")+
+  fill_palette("pastel1")+
+  scale_fill_discrete(name = "Network", labels = c("clover", "trefle"))+
+  labs(x ="Importance", y= "Density") +
+  main_theme
+
+
+gg_G2  = ggplot(communicability_df)+
+  geom_point(aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  labs(x ="G colver", y= "G trefle")+
+  main_theme
+
+gg_I2 = ggplot(communicability_df)+
+  geom_point(aes(importance_clover_nrmlz, importance_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  labs(x ="I colver", y= "I trefle")+
+  main_theme
+ggarrange(hist_G, hist_I,gg_G2,gg_I2, ncol =2, nrow =2)
+```
+```{r}
+gg_I_F_trefle_nrmlz = ggplot(communicability_df)+
+  geom_point(aes(importance_trefle_nrmlz,f_norm_G_trefle_nrmlz ))+
+  labs(x ="I trefle", y= "f_norm trefle")+
+  main_theme
+
+gg_I_F_clover_nrmlz = ggplot(communicability_df)+
+  geom_point(aes(importance_clover_nrmlz,f_norm_G_clover_nrmlz ))+
+  labs(x ="I clover", y= "f_norm clover")+
+  main_theme
+gg_I_F_trefle = ggplot(communicability_df)+
+  geom_point(aes(importance_trefle, f_norm_G_trefle ))+
+  labs(x ="I trefle", y= "f_norm trefle")+
+  main_theme
+
+gg_I_F_clover = ggplot(communicability_df)+
+  geom_point(aes(importance_clover, f_norm_G_clover ))+
+  labs(x ="I clover", y= "f_norm clover")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_clover_nrmlz, f_norm_G_clover ))+
+  labs(x ="f_norm clover norm", y= "f_norm clover")+
+  main_theme
+ggplot(communicability_df)+
+  geom_point(aes(f_norm_G_trefle_nrmlz, f_norm_G_trefle ))+
+  labs(x ="f_norm trefle norm", y= "f_norm trefle")+
+  main_theme
+ggarrange(gg_I_F_trefle, gg_I_F_clover,gg_I_F_trefle_nrmlz, gg_I_F_clover_nrmlz)
+communicability_df[communicability_df$importance_trefle == 0 |communicability_df$importance_clover == 0,]
+```
+The distance between the forbenuis norm of the communicability and the zeta communicability is negatively correlated with the importance metric. It is more continuous and maybe capture in a more efficent way the real impact of the suppretion of the interaction. We can see in the plot I clover~f_ nrom trefle, that there is not gap for the fnorm metric,
+
+### structure of the ntw
+#### Communicability and degree of nodes
+```{r}
+library(lattice)
+clover = read.csv("data/clover.csv", stringsAsFactors = T)
+trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
+
+ID_trefle = which( paste(trefle$virus, trefle$host) %in% 
+                     paste(clover$Virus, clover$Host))
+shared_asso = trefle[ID_trefle, ]
+
+
+uni_ntw_clover = matrix.associations.uni(Virus = clover$Virus, Host = clover$Host)
+uni_ntw_trefle = matrix.associations.uni(Virus = trefle$virus, Host = trefle$host)
+G_trefle = communicability(uni_ntw_trefle)
+G_clover = communicability(uni_ntw_clover)
+names(sort(colSums(uni_ntw_trefle)))
+G_trefle_order = G_trefle[names(sort(colSums(uni_ntw_trefle))),
+                          names(sort(colSums(uni_ntw_trefle)))]
+G_trefle_order_c = G_trefle[names(sort(colSums(uni_ntw_clover))),
+                          names(sort(colSums(uni_ntw_clover)))]
+G_clover_order = G_clover[names(sort(colSums(uni_ntw_clover))),
+                          names(sort(colSums(uni_ntw_clover)))]
+# A = matrix(c(0, 1, 0, 1, 0, 1, 0, 1, 1, 0,
+#                             1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
+#                             0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+#                             1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
+#                             0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+#                             1, 1, 0, 0, 1, 0, 1, 0, 0, 0,
+#                             0, 1, 1, 1, 1, 1, 0, 0, 1, 1,
+#                             1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+#                             1, 1, 0, 1, 1, 0, 1, 0, 0, 1,
+#                             0, 1, 0, 1, 1, 0, 1, 0, 1, 0), ncol = 10, nrow =10)
+# colnames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
+# rownames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
+# G_A = communicability(A)
+# G_A = G_A[names(sort(colSums(A))), names(sort(colSums(A)))]
+# levelplot(G_A)
+colnames(G_trefle_order) = sort(colSums(uni_ntw_trefle))
+rownames(G_trefle_order) = sort(colSums(uni_ntw_trefle))
+levelplot(G_trefle_order, 
+          scales=list(x=list(at=seq(1, ncol(G_trefle_order), by=10),
+                            
+                             rot=45), 
+                      y=list(at=seq(1, nrow(G_trefle_order), by=10))))
+
+
+
+levelplot(G_clover_order)
+
+
+levelplot(G_trefle_order_c)
+
+```
+#### first dim of the communicability
+
+```{r}
+spectre_trefle = eigen(uni_ntw_trefle)
+spectre_clover = eigen(uni_ntw_trefle)
+G1_trefle = spectre_trefle[[2]][1,]%*%t(spectre_trefle[[2]][1,]) * exp(spectre_trefle[[1]][1])
+G2_trefle = spectre_trefle[[2]][2,]%*%t(spectre_trefle[[2]][2,]) * exp(spectre_trefle[[1]][1])
+G3_trefle = spectre_trefle[[2]][3,]%*%t(spectre_trefle[[2]][3,]) * exp(spectre_trefle[[1]][1])
+G4_trefle = spectre_trefle[[2]][4,]%*%t(spectre_trefle[[2]][4,]) * exp(spectre_trefle[[1]][1])
+G5_trefle = spectre_trefle[[2]][5,]%*%t(spectre_trefle[[2]][5,]) * exp(spectre_trefle[[1]][1])
+
+dim1 = spectre_trefle[[2]][1,]
+dim2 = spectre_trefle[[2]][2,]
+dim3 = spectre_trefle[[2]][3,]
+dim4 = spectre_trefle[[2]][4,]
+dim5 = spectre_trefle[[2]][5,]
+names(dim1) = colnames(uni_ntw_trefle)
+names(dim2) = colnames(uni_ntw_trefle)
+names(dim3) = colnames(uni_ntw_trefle)
+names(dim4) = colnames(uni_ntw_trefle)
+names(dim5) = colnames(uni_ntw_trefle)
+
+colnames(G1_trefle) = colnames(uni_ntw_trefle)
+rownames(G1_trefle) = colnames(uni_ntw_trefle)
+colnames(G2_trefle) = colnames(uni_ntw_trefle)
+rownames(G2_trefle) = colnames(uni_ntw_trefle)
+colnames(G3_trefle) = colnames(uni_ntw_trefle)
+rownames(G3_trefle) = colnames(uni_ntw_trefle)
+colnames(G4_trefle) = colnames(uni_ntw_trefle)
+rownames(G4_trefle) = colnames(uni_ntw_trefle)
+colnames(G5_trefle) = colnames(uni_ntw_trefle)
+rownames(G5_trefle) = colnames(uni_ntw_trefle)
+
+#G1_trefle_store = G1_trefle[names(sort(colSums(uni_ntw_trefle))),
+#                          names(sort(colSums(uni_ntw_trefle)))]
+
+G1_trefle_store = G1_trefle[names(sort(dim1)),
+                          names(sort(dim1))]
+G2_trefle_store = G2_trefle[names(sort(dim2)),
+                          names(sort(dim2))]
+G3_trefle_store = G3_trefle[names(sort(dim3)),
+                          names(sort(dim3))]
+G4_trefle_store = G4_trefle[names(sort(dim4)),
+                          names(sort(dim4))]
+G5_trefle_store = G5_trefle[names(sort(dim5)),
+                          names(sort(dim5))]
+
+
+
+p1 = levelplot(G1_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p2 = levelplot(G2_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p3 = levelplot(G3_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p4 = levelplot(G4_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+p5 = levelplot(G5_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
+
+ggarrange(p1,p2,p3,p4,p5)
+```
+
+```{r include=FALSE}
+clover = read.csv("data/clover.csv", stringsAsFactors = T)
+str(clover)
+trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
+uni_ntw_trefle = matrix.associations.uni(Virus = trefle$virus, Host = trefle$host)
+uni_ntw_clover =  matrix.associations.uni(Virus = clover$Virus, Host = clover$Host)
+
+grh_trefle = graph_from_adjacency_matrix(uni_ntw_trefle,mode = "undirected")
+grh_clover = graph_from_adjacency_matrix(uni_ntw_clover,mode = "undirected")
+ID_share_edges = which(paste(as_edgelist(grh_trefle, names=T)[,1],as_edgelist(grh_trefle, names=T)[,2]) %in% paste(as_edgelist(grh_clover, names=T)[,1],as_edgelist(grh_clover, names=T)[,2]))
+
+I_nomr_trfl = communicability_df$importance_trefle_nrmlz
+communicability_df[which(I_nomr_trfl>=max(I_nomr_trfl) - max(I_nomr_trfl)*0.01),]
+edge_color_share = ifelse(I_nomr_trfl>=max(I_nomr_trfl) - max(I_nomr_trfl)*0.01 , "blue",
+              ifelse(communicability_df$importance_trefle_nrmlz==0, brewer.pal(n=9,name ="YlOrRd" )[2],
+               ifelse(I_nomr_trfl<max(I_nomr_trfl) - max(I_nomr_trfl)*0.2, brewer.pal(n=9,name ="YlOrRd" )[6],
+                ifelse(I_nomr_trfl<max(I_nomr_trfl) - max(I_nomr_trfl)*0.1, brewer.pal(n=9,name ="YlOrRd" )[7],
+                 brewer.pal(n=9,name ="YlOrRd" )[9])
+               )))
+edge_color_trefle = rep("gray80",length(E(grh_trefle)))
+edge_color_trefle[ID_share_edges] <- edge_color_share
+
+edge_width_trefle = rep(8,length(E(grh_trefle)))
+edge_width_trefle[-ID_share_edges] =NA
+
+##### Edges value from trefle
+lay = layout.auto(grh_clover)
+plot(grh_trefle, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = edge_width_trefle,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = edge_color_trefle)
+plot(grh_clover, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = 8,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = edge_color_share, layout = lay)
+##### Edges value from clover
+I_nomr_clvr = communicability_df$importance_clover_nrmlz
+max(I_nomr_clvr)
+### colors relative to trefle
+edge_color_share2 = ifelse(I_nomr_clvr>=max(I_nomr_trfl) - max(I_nomr_trfl)*0.01 , "blue",
+              ifelse(I_nomr_clvr==0, brewer.pal(n=9,name ="YlOrRd" )[2],
+               ifelse(I_nomr_clvr<max(I_nomr_trfl) - max(I_nomr_trfl)*0.2, brewer.pal(n=9,name ="YlOrRd" )[6],
+                ifelse(I_nomr_clvr<max(I_nomr_trfl) - max(I_nomr_trfl)*0.1, brewer.pal(n=9,name ="YlOrRd" )[7],
+                 brewer.pal(n=9,name ="YlOrRd" )[9])
+               )))
+plot(grh_clover, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = 8,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = edge_color_share2, layout = lay)
+
+### colors relative to clover
+communicability_df[which(I_nomr_clvr>=max(I_nomr_clvr) - max(I_nomr_clvr)*0.01),]
+edge_color_share3 = ifelse(I_nomr_clvr>=max(I_nomr_clvr) - max(I_nomr_clvr)*0.01 , "blue",
+              ifelse(I_nomr_clvr==0, brewer.pal(n=9,name ="YlOrRd" )[2],
+               ifelse(I_nomr_clvr<max(I_nomr_clvr) - max(I_nomr_clvr)*0.2, brewer.pal(n=9,name ="YlOrRd" )[6],
+                ifelse(I_nomr_clvr<max(I_nomr_clvr) - max(I_nomr_clvr)*0.1, brewer.pal(n=9,name ="YlOrRd" )[7],
+                 brewer.pal(n=9,name ="YlOrRd" )[9])
+               )))
+plot(grh_clover, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = 8,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = edge_color_share3, layout = lay)
+```
