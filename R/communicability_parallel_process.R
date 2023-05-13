@@ -2,6 +2,7 @@ library(tidyverse)
 library(doParallel) # for parallel processing
 library(parallel) # to detect core
 
+#setwd("2*")
 setwd("~/Fac/Master_Rennes/stage1/edges")
 source("exploratory_code/functions.R")
 
@@ -12,7 +13,7 @@ trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 set.seed(1000)
 ID = sample(nrow(clover), 1000)
 clover = clover[ID, ]
-
+ 
 trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
 #####
 
@@ -27,11 +28,11 @@ G_trefle = communicability(uni_ntw_trefle)
 G_clover = communicability(uni_ntw_clover)
 ntw_base = list(uni_ntw_clover = uni_ntw_clover, uni_ntw_trefle = uni_ntw_trefle,
                 G_trefle = G_trefle, G_clover = G_clover)
-str(ntw_base)
 
-communi.func<- function(virus,host, row_ID ,arg){
 
+communi.func<- function(virus, host, row_ID, arg){
   with(arg,{
+    
     ID_virus = which(row.names(uni_ntw_clover) == virus)  
     ID_host = which(colnames(uni_ntw_clover) == host) 
     
@@ -65,8 +66,8 @@ communi.func<- function(virus,host, row_ID ,arg){
     f_norm_G_trefle = norm(G_zeta_trefle,"F") - norm(G_trefle,"F")
     f_norm_G_clover = norm(G_zeta_clover,"F") - norm(G_clover,"F")
     
-    G_pq_zeta_trefle = G_zeta_trefle[ID_virus,ID_host]
-    G_pq_zeta_clover = G_zeta_clover[ID_virus,ID_host]
+    # G_pq_zeta_trefle = G_zeta_trefle[ID_virus,ID_host]
+    # G_pq_zeta_clover = G_zeta_clover[ID_virus,ID_host]
     
     G_pq_trefle = G_trefle[ID_virus,ID_host]
     G_pq_clover = G_clover[ID_virus,ID_host]
@@ -78,8 +79,8 @@ communi.func<- function(virus,host, row_ID ,arg){
     f_norm_G_trefle_nrmlz = norm(G_zeta_trefle_nrmlz,"F") - norm(G_trefle_nrmlz,"F")
     f_norm_G_clover_nrmlz = norm(G_zeta_clover_nrmlz,"F") - norm(G_clover_nrmlz,"F")
     
-    G_pq_zeta_trefle_nrmlz = G_zeta_trefle_nrmlz[ID_virus,ID_host]
-    G_pq_zeta_clover_nrmlz = G_zeta_clover_nrmlz[ID_virus,ID_host]
+    # G_pq_zeta_trefle_nrmlz = G_zeta_trefle_nrmlz[ID_virus,ID_host]
+    # G_pq_zeta_clover_nrmlz = G_zeta_clover_nrmlz[ID_virus,ID_host]
     
     G_pq_trefle_nrmlz = G_trefle_nrmlz[ID_virus,ID_host]
     G_pq_clover_nrmlz = G_clover_nrmlz[ID_virus,ID_host]
@@ -88,14 +89,11 @@ communi.func<- function(virus,host, row_ID ,arg){
     df =data.frame(virus = virus, host = host,
                    importance_trefle = importance_trefle,importance_clover = importance_clover,
                    f_norm_G_trefle = f_norm_G_trefle, f_norm_G_clover = f_norm_G_clover,
-                   G_pq_zeta_trefle = G_pq_zeta_trefle, G_pq_zeta_clover=G_pq_zeta_clover,
                    G_pq_trefle = G_pq_trefle, G_pq_clover = G_pq_clover,
                    importance_trefle_nrmlz = importance_trefle_nrmlz,
                    importance_clover_nrmlz = importance_clover_nrmlz,
                    f_norm_G_trefle_nrmlz = f_norm_G_trefle_nrmlz,
                    f_norm_G_clover_nrmlz = f_norm_G_clover_nrmlz,
-                   G_pq_zeta_trefle_nrmlz = G_pq_zeta_trefle_nrmlz,
-                   G_pq_zeta_clover_nrmlz = G_pq_zeta_clover_nrmlz,
                    G_pq_trefle_nrmlz = G_pq_trefle_nrmlz,
                    G_pq_clover_nrmlz = G_pq_clover_nrmlz)
     row.names(df) = row_ID
@@ -107,15 +105,15 @@ communi.func<- function(virus,host, row_ID ,arg){
 n_iteration = nrow(shared_asso)
 
 ncores =detectCores()
-registerDoParallel(cores=ncores)# Shows the number of Parallel Workers to be used
+registerDoParallel(cores=ncores-1)# Shows the number of Parallel Workers to be used
 
-getDoParWorkers()# number of actual workers
+#getDoParWorkers()# number of actual workers
 
-t1 = Sys.time()
+
 communicability_df = foreach(virus = shared_asso$virus, host = shared_asso$host, row_ID = row.names(shared_asso),
-               arg = lapply(1:n_iteration, function (x) ntw_base),
+               arg = lapply(1:4, function (x) ntw_base),
         .combine = rbind, .verbose = T) %dopar%{communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
 
-write.csv(importance_df, "output/communicability_df.csv")
+write.csv(communicability_df, "output/communicability_df.csv")
 
 
