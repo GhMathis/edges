@@ -187,7 +187,7 @@ ggplot(communicability_df)+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
   main_theme
 
-### zeta G ~ G for colver and trefle, we expect that no point will be above the 1:1 line, this is what we observe so every think seems correct. The points that are far below the line should represent the most importante interactions. 
+### zeta G ~ G for colver and trefle, we expect that no point will be above the 1:1 line, this is what we observe so every things seems correct. The points that are far below the line should represent the most importante interactions. 
 ggplot(communicability_df)+
   geom_point(aes(G_pq_trefle_nrmlz, G_pq_zeta_trefle_nrmlz))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
