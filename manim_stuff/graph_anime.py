@@ -36,9 +36,16 @@ class Networks(Scene):
         egde_col_pos = egde_col_pos| egde_col_pos2
         
         return(egde_col_pos)
-    test = nx.gnp_random_graph(10,0.1)
-    test.nodes
-    test.edges
+    def verte_color(self,eign_vec):
+
+        pos_verte =  np.where(eign_vec > 0)
+        neg_verte =  np.where(eign_vec < 0)
+        
+        verte_col_pos = {v:{"fill_color": Colors.blue.value} for v in pos_verte[0]}
+        verte_col_pos2 = {v:{"fill_color": Colors.red.value} for v in neg_verte[0]}
+        verte_col_pos = verte_col_pos| verte_col_pos2
+        
+        return(verte_col_pos)
     def construct(self):
         adj_arr = np.array([[0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
                             [1, 0, 0, 1, 0, 1, 1, 0, 1, 1],
@@ -61,8 +68,6 @@ class Networks(Scene):
                  in zip(spectra[0], spectra[1])]
         list_g_decomp[0] == list_g_decomp[0].T
 
-        edge_col = self.egde_color(list_g_decomp[0])
-        
         ##### Object creation
         #lyt = nx.bipartite_layout(self.vertices, self.vertices[:2])
 
@@ -72,12 +77,13 @@ class Networks(Scene):
                          layout = "kamada_kawai",
                          edge_config = self.egde_color(g_decomp)).scale(0.5) for g_decomp
                     in list_g_decomp[:5]]
+        
         meta_ntw2 = [Graph(vertices = self.vertices,
                          edges = self.edges,
                          labels =True,
-                         layout = "spectral",
-                         edge_config = self.egde_color(g_decomp)).scale(0.5) for g_decomp
-                    in list_g_decomp[:5]]
+                         layout = "kamada_kawai",
+                         vertex_config = self.verte_color( vec*np.exp(vec))).scale(0.5) for val, vec
+                    in zip(spectra[0][:5], spectra[1][:5])]
 
         r1 = VGroup(*meta_ntw).arrange()
         r2 = VGroup(*meta_ntw2).arrange()
