@@ -409,12 +409,20 @@ p5 = levelplot(G5_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
 
 ggarrange(p1,p2,p3,p4,p5)
 
-grh_trefle = graph_from_edgelist(as.matrix(trefle[,names(trefle) %in% c("virus","host")]))
 
+grh_clover = graph_from_adjacency_matrix(uni_ntw_clover,mode = "undirected")
+
+grh_trefle = graph_from_data_frame(trefle[,names(trefle) %in% c("virus", "host")])
+str(grh_trefle)
+
+ntw_trefle = matrix.associations(Virus = trefle$virus, Host = trefle$host)
+grh_trefle = graph_from_incidence_matrix(ntw_trefle)
+L = layout_as_bipartite(grh_trefle)
 plot(grh_trefle, vertex.size=1,vertex.label=NA,
       vertex.label.cex = 2,edge.width = 4,
      edge.label=NA,edge.label.cex = 2,
-     edge.color = ifelse(G2_trefle_store>0,"blue","red"))
+     edge.color = ifelse(G2_trefle_store>0,"blue","red"),
+     layout = L)
 ```
 
 ```{r include=FALSE}
