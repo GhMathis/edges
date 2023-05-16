@@ -4,7 +4,7 @@ author: "MG"
 date: "2023-05-03"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -17,6 +17,7 @@ setwd("~/Fac/Master_Rennes/stage1/edges")
 library(tidyverse)
 library(ggpubr)
 library(igraph)
+library(lattice)
 library(RColorBrewer)
 source("exploratory_code/functions.R")
 ```
@@ -285,7 +286,7 @@ The distance between the forbenuis norm of the communicability and the zeta comm
 ### structure of the ntw
 #### Communicability and degree of nodes
 ```{r}
-library(lattice)
+
 clover = read.csv("data/clover.csv", stringsAsFactors = T)
 trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 
@@ -313,18 +314,24 @@ G_trefle_order_c = G_trefle[names(sort(colSums(uni_ntw_clover))),
                           names(sort(colSums(uni_ntw_clover)))]
 G_clover_order = G_clover[names(sort(colSums(uni_ntw_clover))),
                           names(sort(colSums(uni_ntw_clover)))]
-# A = matrix(c(0, 1, 0, 1, 0, 1, 0, 1, 1, 0,
-#                             1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
-#                             0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
-#                             1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
-#                             0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
-#                             1, 1, 0, 0, 1, 0, 1, 0, 0, 0,
-#                             0, 1, 1, 1, 1, 1, 0, 0, 1, 1,
-#                             1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
-#                             1, 1, 0, 1, 1, 0, 1, 0, 0, 1,
-#                             0, 1, 0, 1, 1, 0, 1, 0, 1, 0), ncol = 10, nrow =10)
-# colnames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
-# rownames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
+A = matrix(c(0, 1, 0, 1, 0, 1, 0, 1, 1, 0,
+                            1, 0, 0, 1, 0, 1, 1, 0, 1, 1,
+                            0, 0, 0, 0, 0, 0, 1, 1, 0, 0,
+                            1, 1, 0, 0, 0, 0, 1, 1, 1, 1,
+                            0, 0, 0, 0, 0, 1, 1, 0, 1, 1,
+                            1, 1, 0, 0, 1, 0, 1, 0, 0, 0,
+                            0, 1, 1, 1, 1, 1, 0, 0, 1, 1,
+                            1, 0, 1, 1, 0, 0, 0, 0, 0, 0,
+                            1, 1, 0, 1, 1, 0, 1, 0, 0, 1,
+                            0, 1, 0, 1, 1, 0, 1, 0, 1, 0), ncol = 10, nrow =10)
+colnames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
+rownames(A) = c("A", "B"," C", "D", "E", "F", "G", "H", "I", "J")
+test = graph_from_adjacency_matrix(A, mode = "undirected")
+
+plot(test, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = 4,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = ifelse(G2_trefle_store>0,"blue","red"))
 # G_A = communicability(A)
 # G_A = G_A[names(sort(colSums(A))), names(sort(colSums(A)))]
 # levelplot(G_A)
@@ -348,12 +355,13 @@ levelplot(G_trefle_order_c)
 
 ```{r}
 spectre_trefle = eigen(uni_ntw_trefle)
-spectre_clover = eigen(uni_ntw_trefle)
+spectre_clover = eigen(uni_ntw_clover)
+### 5 first dim of cumminicability
 G1_trefle = spectre_trefle[[2]][1,]%*%t(spectre_trefle[[2]][1,]) * exp(spectre_trefle[[1]][1])
-G2_trefle = spectre_trefle[[2]][2,]%*%t(spectre_trefle[[2]][2,]) * exp(spectre_trefle[[1]][1])
-G3_trefle = spectre_trefle[[2]][3,]%*%t(spectre_trefle[[2]][3,]) * exp(spectre_trefle[[1]][1])
-G4_trefle = spectre_trefle[[2]][4,]%*%t(spectre_trefle[[2]][4,]) * exp(spectre_trefle[[1]][1])
-G5_trefle = spectre_trefle[[2]][5,]%*%t(spectre_trefle[[2]][5,]) * exp(spectre_trefle[[1]][1])
+G2_trefle = spectre_trefle[[2]][2,]%*%t(spectre_trefle[[2]][2,]) * exp(spectre_trefle[[1]][2])
+G3_trefle = spectre_trefle[[2]][3,]%*%t(spectre_trefle[[2]][3,]) * exp(spectre_trefle[[1]][3])
+G4_trefle = spectre_trefle[[2]][4,]%*%t(spectre_trefle[[2]][4,]) * exp(spectre_trefle[[1]][4])
+G5_trefle = spectre_trefle[[2]][5,]%*%t(spectre_trefle[[2]][5,]) * exp(spectre_trefle[[1]][5])
 
 dim1 = spectre_trefle[[2]][1,]
 dim2 = spectre_trefle[[2]][2,]
@@ -400,6 +408,13 @@ p4 = levelplot(G4_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
 p5 = levelplot(G5_trefle_store, scales=list(x=list(at=NULL),y=list(at=NULL)))
 
 ggarrange(p1,p2,p3,p4,p5)
+
+grh_trefle = graph_from_edgelist(as.matrix(trefle[,names(trefle) %in% c("virus","host")]))
+
+plot(grh_trefle, vertex.size=1,vertex.label=NA,
+      vertex.label.cex = 2,edge.width = 4,
+     edge.label=NA,edge.label.cex = 2,
+     edge.color = ifelse(G2_trefle_store>0,"blue","red"))
 ```
 
 ```{r include=FALSE}
@@ -407,7 +422,6 @@ grh_trefle = graph_from_adjacency_matrix(uni_ntw_trefle,mode = "undirected")
 sum(uni_ntw_trefle)/2
 max(all_data$G_trefle_share)
 str(summary(communicability_df$importance_trefle_nrmlz))
-temp = 
 
 ID_share_edges = which(paste(as_edgelist(grh_trefle, names=T)[,1],as_edgelist(grh_trefle, names=T)[,2]) %in% paste(as_edgelist(grh_clover, names=T)[,1],as_edgelist(grh_clover, names=T)[,2]))
 
@@ -434,6 +448,7 @@ plot(grh_clover, vertex.size=1,vertex.label=NA,
       vertex.label.cex = 2,edge.width = 8,
      edge.label=NA,edge.label.cex = 2,
      edge.color = edge_color_share, layout = lay)
+
 ##### Edges value from clover
 I_nomr_clvr = communicability_df$importance_clover_nrmlz
 edge_color_share2 = ifelse(I_nomr_clvr>=max(I_nomr_trfl) - max(I_nomr_trfl)*0.01 , "blue",
