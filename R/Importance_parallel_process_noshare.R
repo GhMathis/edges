@@ -16,14 +16,10 @@ trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 # 
 # trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
 #####
-str(clover)
-clover = clover %>%
-  filter(Host != "Homo sapiens")
-trefle = trefle %>%
-  filter(Host != "Homo sapiens")
+
 ID_trefle = which( paste(trefle$virus, trefle$host) %in% 
                      paste(clover$Virus, clover$Host))
-shared_asso = trefle[ID_trefle, ]
+unshared_asso = trefle[-ID_trefle, ]
 
 
 uni_ntw_clover = matrix.associations.uni(Virus = clover$Virus, Host = clover$Host)
@@ -54,7 +50,7 @@ communi.func<- function(virus,host,row_ID,arg){
     uni_ntw_trefle[ID_host,ID_virus] = 1 
     uni_ntw_clover[ID_virus,ID_host] = 1
     uni_ntw_clover[ID_host,ID_virus] = 1
-    
+
     G_delta_trefle = G_trefle-G_zeta_trefle
     G_delta_clover = G_clover-G_zeta_clover
     
@@ -74,8 +70,11 @@ communi.func<- function(virus,host,row_ID,arg){
     f_norm_G_trefle = norm(G_zeta_trefle,"F") - norm(G_trefle,"F")
     f_norm_G_clover = norm(G_zeta_clover,"F") - norm(G_clover,"F")
     
-    z_score_G_trefle = mean()
-    z_score_G_clover = 
+    z_score_G_trefle =(G_trefle[ID_virus,ID_host]- mean(G_trefle))/sd(G_trefle)
+    z_score_G_clover =(G_clover[ID_virus,ID_host]- mean(G_clover))/sd(G_clover)
+    
+    z_score_I_trefle =(G_delta_trefle[ID_virus,ID_host]- mean(G_delta_trefle))/sd(G_delta_trefle)
+    z_score_I_clover =(G_delta_clover[ID_virus,ID_host]- mean(G_delta_clover))/sd(G_delta_clover)
     
     # G_pq_zeta_trefle = G_zeta_trefle[ID_virus,ID_host]
     # G_pq_zeta_clover = G_zeta_clover[ID_virus,ID_host]
@@ -106,7 +105,11 @@ communi.func<- function(virus,host,row_ID,arg){
                    f_norm_G_trefle_nrmlz = f_norm_G_trefle_nrmlz,
                    f_norm_G_clover_nrmlz = f_norm_G_clover_nrmlz,
                    G_pq_trefle_nrmlz = G_pq_trefle_nrmlz,
-                   G_pq_clover_nrmlz = G_pq_clover_nrmlz)
+                   G_pq_clover_nrmlz = G_pq_clover_nrmlz,
+                   z_score_G_trefle = z_score_G_trefle,
+                   z_score_G_clover = z_score_G_clover,
+                   z_score_I_trefle = z_score_I_trefle,
+                   z_score_I_clover = z_score_I_clover)
 
     row.names(df) = row_ID
     
@@ -115,7 +118,7 @@ communi.func<- function(virus,host,row_ID,arg){
   })
   
 }
-n_iteration = nrow(shared_asso)
+n_iteration = nrow(unshared_asso)
 
 ncores =detectCores()
 print(ncores)
@@ -124,8 +127,8 @@ registerDoParallel(cores=(ncores-1))# Shows the number of Parallel Workers to be
 getDoParWorkers()# number of actual workers
 
 
-communicability_df = foreach(virus = shared_asso$virus, host = shared_asso$host, row_ID = row.names(shared_asso), arg = lapply(1:n_iteration, function (x) ntw_base),.combine = rbind, .verbose = T) %dopar%{communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
+communicability_df = foreach(virus = unshared_asso$virus, host = unshared_asso$host, row_ID = row.names(unshared_asso), arg = lapply(1:n_iteration, function (x) ntw_base),.combine = rbind, .verbose = T) %dopar%{communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
 
-write.csv(communicability_df, "output/communicability_df.csv")
+write.csv(communicability_df, "output/importance_unshared_df.csv")
 
 
