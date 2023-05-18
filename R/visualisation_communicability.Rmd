@@ -4,7 +4,7 @@ author: "MG"
 date: "2023-05-03"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -173,13 +173,16 @@ plot(grh_trefle, vertex.size=1,vertex.label=NA,
 ### Linking importance to biological
 ```{r}
 str(communicability_df)
-str(temp)
-length(duplicated(temp))-sum(duplicated(communicability_df[,2:3]))
 clvr_colsub = clover[,colnames(clover) %in% c("HostOrder","HostFamily", "VirusOrder", "VirusFamily",
                                             "Virus", "Host")]
+
 clvr_colsub = clvr_colsub[!duplicated(clvr_colsub),]
 temp = communicability_df%>%
   full_join(clvr_colsub, by =c("host" ="Host", "virus" = "Virus"))
+str(temp)
+length(duplicated(temp))-sum(duplicated(communicability_df[,2:3]))
+
+
 str(temp)
 ggplot(temp)+
   geom_boxplot(aes(HostOrder, importance_clover_nrmlz))
