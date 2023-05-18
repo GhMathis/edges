@@ -20,7 +20,7 @@ trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 clover = clover %>%
   filter(Host != "Homo sapiens")
 trefle = trefle %>%
-  filter(Host != "Homo sapiens")
+  filter(host != "Homo sapiens")
 ID_trefle = which( paste(trefle$virus, trefle$host) %in% 
                      paste(clover$Virus, clover$Host))
 shared_asso = trefle[ID_trefle, ]
