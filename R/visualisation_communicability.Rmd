@@ -36,7 +36,9 @@ main_theme = theme_bw()+
 ```
 
 ```{r}
-communicability_df = read.csv("output/communicability_df.csv",
+importance_df = read.csv("output/Importance_df.csv",
+                         stringsAsFactors = T)
+importance_homo_df = read.csv("output/Importance_homo_df.csv",
                          stringsAsFactors = T)
 ```
 ## Check the link between the importance metrique(I) and the communicability (G)
@@ -49,27 +51,26 @@ $$I = G - \zeta G$$
 Communicability_df was produce by the *"communicability_parallel_process.R"* function.
 ```{r}
 
-ggplot(communicability_df)+
+ggplot(importance_df)+
   geom_point(aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
   main_theme
 
-ggplot(communicability_df)+
+ggplot(importance_df)+
   geom_point(aes(importance_clover_nrmlz,importance_trefle_nrmlz ))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
   main_theme
-ggplot(communicability_df)+
+ggplot(importance_df)+
   geom_point(aes(f_norm_G_clover_nrmlz,f_norm_G_trefle_nrmlz))+
   main_theme
-ggplot(communicability_df)+
+ggplot(importance_df)+
   geom_point(aes(f_norm_G_clover,f_norm_G_trefle))+
   main_theme
-communicability_df[communicability_df$f_norm_G_trefle_nrmlz>0.5,]
+
 ```
 ### Histograme des varaible les plis intersantes
 ```{r}
-str(communicability_df)
-G_nrmlz_subset = communicability_df %>%
+G_nrmlz_subset = importance_df %>%
   select(c(virus, host, X, G_pq_clover_nrmlz, G_pq_trefle_nrmlz))%>%
   pivot_longer(-c(virus, host, X),values_to ="G_nrmlz")
 
@@ -80,11 +81,9 @@ hist_G = ggplot(G_nrmlz_subset)+
   scale_fill_discrete(name = "Network", labels = c("clover", "trefle"))+
   labs(x ="Communicability (G)", y= "Density") 
 
-I_nrmlz_subset = communicability_df %>%
+I_nrmlz_subset = importance_df %>%
   select(c(virus, host, X, importance_trefle_nrmlz, importance_clover_nrmlz))%>%
   pivot_longer(-c(virus, host, X),values_to ="I_nrmlz")
-
-str(G_nrmlz_subset)
 
 hist_I = ggplot(I_nrmlz_subset)+
   geom_density(aes(I_nrmlz, fill = name),alpha = 0.2, stat = "density")+
@@ -95,9 +94,9 @@ hist_I = ggplot(I_nrmlz_subset)+
 
 
 gg_G2  = ggplot()+
-  geom_point(data=communicability_df, aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
+  geom_point(data=importance_df, aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
-  geom_text_repel(data=subset(communicability_df, G_pq_trefle_nrmlz > 0.375 |
+  geom_text_repel(data=subset(importance_df, G_pq_trefle_nrmlz > 0.375 |
                                 G_pq_clover_nrmlz > 0.2),
             aes(G_pq_clover_nrmlz,G_pq_trefle_nrmlz, label = paste(host, "(", virus, ")", sep = "")),
             size=4,
@@ -106,10 +105,10 @@ gg_G2  = ggplot()+
   labs(x ="G colver", y= "G trefle")+
   main_theme
 
-gg_I2 = ggplot(communicability_df)+
+gg_I2 = ggplot(importance_df)+
   geom_point(aes(importance_clover_nrmlz, importance_trefle_nrmlz))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
-  geom_text_repel(data=subset(communicability_df, importance_trefle_nrmlz > 0.0055 |
+  geom_text_repel(data=subset(importance_df, importance_trefle_nrmlz > 0.0055 |
                                   (importance_trefle_nrmlz > 0.005 & importance_clover_nrmlz > 0.03) |
                                 importance_clover_nrmlz > 0.04),
                     
@@ -120,25 +119,60 @@ gg_I2 = ggplot(communicability_df)+
 
   labs(x ="I colver", y= "I trefle")+
   main_theme
-gg_trefle = ggplot(communicability_df)+
+gg_trefle = ggplot(importance_df)+
   geom_point(aes(G_pq_trefle_nrmlz, importance_trefle_nrmlz))+
   geom_abline(intercept= 0, slope = 1, col = "blue")+
   labs(x ="G trefle", y= "I trefle")+
   main_theme
 ggarrange(hist_G,gg_G2, ncol =2)
 ggarrange(hist_I,gg_I2, ncol =2)
-communicability_df$host[communicability_df$importance_clover_nrmlz > 0.03]
+#communicability_df$host[importance_df$importance_clover_nrmlz > 0.03]
 ```
-### compaire I of the link and the global impact of the removal with forbenuis norm difference of matrice communicability
+### compaire I of the link and the global impact of the removal with forbenuis norm difference of matrice communicability and with the z-score
 Information loss with the I metric, the f norm show that the link have always the same impact or less on the network than what it is possible to interpret soley with I
 ```{r}
-ggplot(communicability_df)+
+
+
+### for the importance metric : general forme( G- zetaG or zetaG - G)
+ggplot(importance_df)+
   geom_point(aes(importance_trefle_nrmlz,f_norm_G_trefle ))+
   labs(x ="I trefle", y= "f_norm trefle")+
   main_theme
-ggplot(communicability_df)+
+#z score I is compute on the matrix G - zetaG
+ggplot(importance_df)+
+  geom_point(aes(z_score_I_trefle,f_norm_G_trefle ))+
+  labs(x ="z score trefle", y= "f_norm trefle")+
+  main_theme
+ggplot(importance_df)+
+  geom_point(aes(importance_trefle_nrmlz,z_score_I_trefle ))+
+  labs(x ="I trefle", y= "z score trefle")+
+  main_theme
+#importance_df[importance_df$z_score_I_trefle>65 & !is.na(importance_df$z_score_I_trefle),]
+ggplot(importance_df)+
+  geom_point(aes(z_score_G_trefle,z_score_I_trefle ))+
+  labs(x ="z score G trefle", y= "z score I trefle")+
+  main_theme
+ggplot(importance_df)+
   geom_point(aes(importance_clover_nrmlz,f_norm_G_clover))+
   labs(x ="I clover", y= "f_norm clover")+
+  main_theme
+
+ggplot(importance_df)+
+  geom_point(aes(z_score_I_clover,f_norm_G_clover))+
+  labs(x ="z score I clover", y= "f_norm clover")+
+  main_theme
+ggplot(importance_df)+
+  geom_point(aes(z_score_I_clover,importance_clover_nrmlz))+
+  labs(x ="z score I clover", y= "I clover")+
+  main_theme
+str(importance_df)
+ggplot(importance_df)+
+  geom_point(aes(z_score_G_clover, G_pq_clover_nrmlz))+
+  labs(x ="z score G clover", y= "G clover")+
+  main_theme
+ggplot(importance_df)+
+  geom_point(aes(z_score_I_clover, importance_trefle_nrmlz))+
+  labs(x ="z score i clover", y= "i clover")+
   main_theme
 
 ```
