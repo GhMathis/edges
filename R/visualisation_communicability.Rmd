@@ -4,7 +4,7 @@ author: "MG"
 date: "2023-05-03"
 output: html_document
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -68,8 +68,9 @@ ggplot(importance_df)+
   main_theme
 
 ```
-### Histograme des varaible les plis intersantes
+###Main figures
 ```{r}
+#####with Homo sapiens
 G_nrmlz_subset = importance_df %>%
   select(c(virus, host, X, G_pq_clover_nrmlz, G_pq_trefle_nrmlz))%>%
   pivot_longer(-c(virus, host, X),values_to ="G_nrmlz")
@@ -128,6 +129,89 @@ ggarrange(hist_G,gg_G2, ncol =2)
 ggarrange(hist_I,gg_I2, ncol =2)
 #communicability_df$host[importance_df$importance_clover_nrmlz > 0.03]
 ```
+```{r}
+#####without Homo sapiens
+str(importance_homo_df)
+G_nrmlz_subset.h = importance_homo_df %>%
+  select(c(virus, host, X, G_pq_clover_nrmlz, G_pq_trefle_nrmlz))%>%
+  pivot_longer(-c(virus, host, X),values_to ="G_nrmlz")
+
+hist_G.h = ggplot(G_nrmlz_subset.h)+
+  geom_density(aes(G_nrmlz, fill = name),alpha = 0.2, stat = "density")+
+  fill_palette("pastel1")+
+  main_theme+
+  scale_fill_discrete(name = "Network", labels = c("clover", "trefle"))+
+  labs(x ="Communicability (G)", y= "Density") 
+
+I_nrmlz_subset.h = importance_homo_df %>%
+  select(c(virus, host, X, importance_trefle_nrmlz, importance_clover_nrmlz))%>%
+  pivot_longer(-c(virus, host, X),values_to ="I_nrmlz")
+
+hist_I.h = ggplot(I_nrmlz_subset.h)+
+  geom_density(aes(I_nrmlz, fill = name),alpha = 0.2, stat = "density")+
+  fill_palette("pastel1")+
+  scale_fill_discrete(name = "Network", labels = c("clover", "trefle"))+
+  labs(x ="Importance", y= "Density") +
+  main_theme
+
+
+gg_G2.h  = ggplot()+
+  geom_point(data=importance_homo_df, aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  geom_text_repel(data=subset(importance_homo_df, G_pq_trefle_nrmlz > 0.375 |
+                                G_pq_clover_nrmlz > 0.5),
+            aes(G_pq_clover_nrmlz,G_pq_trefle_nrmlz, label = paste(host, "(", virus, ")", sep = "")),
+            size=4,
+            box.padding = unit(0.5, "lines"),
+            max.overlaps =20)+
+  labs(x ="G colver", y= "G trefle")+
+  main_theme
+
+gg_I2.h = ggplot(importance_homo_df)+
+  geom_point(aes(importance_clover_nrmlz, importance_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  geom_text_repel(data=subset(importance_homo_df, importance_trefle_nrmlz > 0.0055 |
+                                  (importance_trefle_nrmlz > 0.003 & importance_clover_nrmlz > 0.035) |
+                                importance_clover_nrmlz > 0.05),
+                    
+            aes(importance_clover_nrmlz,importance_trefle_nrmlz, label = paste(host, "(", virus, ")", sep = "")),
+            size=4,
+            box.padding = unit(0.5, "lines"),
+            max.overlaps = 20)+
+
+  labs(x ="I colver", y= "I trefle")+
+  main_theme
+gg_trefle.h = ggplot(importance_homo_df)+
+  geom_point(aes(G_pq_trefle_nrmlz, importance_trefle_nrmlz))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  labs(x ="G trefle", y= "I trefle")+
+  main_theme
+ggarrange(hist_G.h,gg_G2.h, ncol =2)
+ggarrange(hist_I.h,gg_I2.h, ncol =2)
+```
+```{r}
+importance_homo_df
+importance_df
+order(importance_df$G_pq_clover_nrmlz,decreasing = T )
+max(importance_df$G_pq_clover_nrmlz )
+importance_df$G_pq_clover_nrmlz[3972 ]
+Gmax_50_clover_nohomo = importance_homo_df%>%
+  slice(order(importance_df$G_pq_clover_nrmlz,decreasing = T )[1:50])
+Gmax_50_trefle_nohomo = importance_homo_df%>%
+  slice(order(importance_df$G_pq_trefle_nrmlz,decreasing = T )[1:50])
+
+Gmax_50_clover = importance_df%>%
+  slice(order(importance_df$G_pq_clover_nrmlz,decreasing = T )[1:50])
+Gmax_50_trefle = importance_df%>%
+  slice(order(importance_df$G_pq_trefle_nrmlz,decreasing = T )[1:50])
+ggplot(Gmax_50_trefle)+
+  geom_point(aes(G_pq_trefle_nrmlz, importance_trefle_nrmlz))
+ggplot(Gmax_50_trefle_nohomo )+
+  geom_point(aes(G_pq_trefle_nrmlz, importance_trefle_nrmlz))
+Gmax_50_trefle[,2:3]
+Gmax_50_trefle_nohomo[,2:3]
+```
+
 ### compaire I of the link and the global impact of the removal with forbenuis norm difference of matrice communicability and with the z-score
 Information loss with the I metric, the f norm show that the link have always the same impact or less on the network than what it is possible to interpret soley with I
 ```{r}
@@ -174,6 +258,7 @@ ggplot(importance_df)+
   geom_point(aes(z_score_I_clover, importance_trefle_nrmlz))+
   labs(x ="z score i clover", y= "i clover")+
   main_theme
+### hard to know which one to pick ....
 
 ```
 
@@ -206,16 +291,28 @@ plot(grh_trefle, vertex.size=1,vertex.label=NA,
 ```
 ### Linking importance to biological
 ```{r}
-str(communicability_df)
+str(importance_df)
 clvr_colsub = clover[,colnames(clover) %in% c("HostOrder","HostFamily", "VirusOrder", "VirusFamily",
                                             "Virus", "Host")]
 
 clvr_colsub = clvr_colsub[!duplicated(clvr_colsub),]
-temp = communicability_df%>%
+temp = importance_homo_df%>%
   full_join(clvr_colsub, by =c("host" ="Host", "virus" = "Virus"))
 str(temp)
 length(duplicated(temp))-sum(duplicated(communicability_df[,2:3]))
 
+ggplot(temp)+
+  geom_point(aes(importance_clover_nrmlz, importance_trefle_nrmlz, col =HostOrder))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(temp)+
+  geom_point(aes(G_pq_clover_nrmlz, G_pq_trefle_nrmlz, col =HostOrder))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
+ggplot(temp)+
+  geom_point(aes(f_norm_G_clover_nrmlz, f_norm_G_trefle_nrmlz, col =HostOrder))+
+  geom_abline(intercept= 0, slope = 1, col = "blue")+
+  main_theme
 
 str(temp)
 ggplot(temp)+
