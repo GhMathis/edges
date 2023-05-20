@@ -1,0 +1,175 @@
+---
+title: "all_trefle_importance"
+author: "MG"
+date: "2023-05-20"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+setwd("~/Fac/Master_Rennes/stage1/edges")
+
+library(tidyverse)
+library(ggpubr)
+library(igraph)
+library(ggrepel)
+library(RColorBrewer)
+library(car)
+source("R/functions.R")
+```
+
+```{r}
+main_theme = theme_bw()+
+  theme(line = element_blank(), 
+        axis.line = element_line(colour = "black"),
+        panel.border = element_blank(),
+        axis.ticks =  element_line(colour = "black"),
+        axis.text.x = element_text(colour = "black", size=17),
+        axis.text.y = element_text(colour = "black", size=17),
+        legend.title = element_text(colour = "black", size=17),
+        legend.text = element_text(colour = "black", size=15),
+        axis.title=element_text(size=15))
+```
+
+```{r}
+imputed_association = read.csv("data/imputed_associations.csv")
+
+importance_trefle_df = read.csv("output/importance_unshared_df.csv")
+importance_trefle_df$status = "imputed associations"
+
+importance_df = read.csv("output/importance_df.csv")
+importance_df$status = "observed associations"
+str(importance_df)
+str(importance_trefle_df)
+
+clover = read.csv("data/clover.csv")
+str(clover)
+
+#
+str(imputed_association)
+imputed_association = imputed_association%>%
+  full_join(importance_trefle_df,by =c("host", "virus"))
+str(imputed_association)
+#
+importance_trefle_df = rbind(importance_trefle_df, importance_df[,names(importance_df) %in% names(importance_trefle_df)])
+
+
+```
+
+```{r}
+ggplot(imputed_association)+
+  geom_point(aes(G_pq_trefle_nrmlz,P))+
+  main_theme
+ggplot(imputed_association)+
+  geom_point(aes(G_pq_trefle_nrmlz,evidence))+
+  geom_smooth(aes(G_pq_trefle_nrmlz,evidence),method = "lm")+
+  scale_y_log10()+
+  main_theme
+ggplot(imputed_association)+
+  geom_point(aes(importance_trefle_nrmlz,evidence))+
+  geom_smooth(aes(importance_trefle_nrmlz,evidence),method = "lm")+
+  scale_y_log10()+
+  main_theme
+
+m1 = lm(log(evidence)~G_pq_trefle_nrmlz, data = imputed_association)
+m2 = lm(log(evidence)~importance_trefle_nrmlz, data = imputed_association)
+m12 = lm(log(evidence)~importance_trefle_nrmlz+G_pq_trefle_nrmlz, data = imputed_association)
+summary(m1)
+summary(m2)
+summary(m12)
+anova(m1)
+
+Anova(m12, type=c("II"))
+anova(m1,m2,m12)
+AIC(m1)
+AIC(m2)
+AIC(m12)
+```
+
+
+```{r}
+str(importance_trefle_df)
+gg_trefle = ggplot(importance_trefle_df)+
+  geom_point(aes(G_pq_trefle_nrmlz, importance_trefle_nrmlz,col = status), cex = 2, alpha =0.2)+
+  geom_text_repel(data=subset(importance_trefle_df, G_pq_trefle_nrmlz > 0.6),
+            aes(G_pq_trefle_nrmlz,importance_trefle_nrmlz, label = paste(host, "(", virus, ")", sep = "")),
+            size=3,
+            box.padding = unit(0.5, "lines"),
+            max.overlaps =1000)+
+  labs(x ="G trefle", y= "I trefle")+
+  main_theme
+hist_I = ggplot(importance_trefle_df)+
+  geom_density(aes(importance_trefle_nrmlz),alpha = 0.2, stat = "density")+
+  labs(x ="Importance", y= "Density") +
+  main_theme
+hist_G =ggplot(importance_trefle_df)+
+  geom_density(aes(G_pq_trefle_nrmlz),alpha = 0.2, stat = "density")+
+  labs(x ="Communicability", y= "Density") +
+  
+  main_theme
+gg_trefle
+hist_I
+hist_G
+str(importance_trefle_df)
+ggplot(importance_trefle_df)+
+  geom_point(aes(G_pq_trefle_nrmlz, f_norm_G_trefle ,col = status), cex = 2, alpha =0.2)
+ggplot(importance_trefle_df)+
+  geom_point(aes(z_score_G_trefle, z_score_I_trefle ,col = status), cex = 2, alpha =0.2)
+```
+
+### test
+```{r}
+importance_trefle_df$status[which(is.na(importance_trefle_df$z_score_I_trefle))]
+which(is.na(importance_trefle_df$z_score_I_trefle))[1]
+importance_trefle_df[75902,]
+trefle = read.csv("data/trefle.csv")
+uni_ntw_trefle = matrix.associations.uni(Virus = trefle$virus,Host = trefle$host)
+
+ID_virus = which(row.names(uni_ntw_trefle) == importance_trefle_df[75902,]$virus)  
+ID_host = which(colnames(uni_ntw_trefle) == importance_trefle_df[75902,]$host) 
+uni_ntw_trefle[ID_virus,ID_host] = 0 # change the interaction (perturbation == zeta)
+uni_ntw_trefle[ID_host,ID_virus] = 0 
+
+G_zeta_trefle = communicability(uni_ntw_trefle)
+
+uni_ntw_trefle[ID_virus,ID_host] = 1  # remove the change
+uni_ntw_trefle[ID_host,ID_virus] = 1 
+G_trefle = communicability(uni_ntw_trefle)
+G_delta_trefle = G_trefle-G_zeta_trefle
+
+z_score_G_trefle =(G_trefle[ID_virus,ID_host]- mean(G_trefle))/sd(G_trefle)
+
+z_score_I_trefle =(G_delta_trefle[ID_virus,ID_host]-mean(G_delta_trefle))/sd(G_delta_trefle)
+    
+
+```
+### most importante order
+```{r}
+
+importance_trefle_df$HostOrder= "_"
+importance_trefle_df$VirusOrder= "_"
+importance_trefle_df$host = as.factor(importance_trefle_df$host)
+importance_trefle_df$virus = as.factor(importance_trefle_df$virus)
+for(h in as.character(levels(importance_trefle_df$hos))){
+  HO = clover$HostOrder[which(clover$Host == h)[1]]
+  importance_trefle_df$HostOrder[importance_trefle_df$host == h]= as.character(HO)
+}
+for(h in as.character(levels(importance_trefle_df$virus))){
+  VO = clover$VirusOrder[which(clover$Virus == h)[1]]
+  importance_trefle_df$VirusOrder[importance_trefle_df$virus == h]= as.character(VO)
+}
+
+importance_max_subset = subset(importance_trefle_df, importance_trefle_df$G_pq_trefle_nrmlz>0.5)
+str(importance_max_subset)
+importance_count_hostOrder = importance_max_subset%>%
+  select(HostOrder)%>%
+  count(HostOrder)
+ggplot(importance_max_subset, aes(HostOrder))+
+  geom_bar(stat = "count")
+```
+
