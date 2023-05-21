@@ -16,6 +16,7 @@ trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 # 
 # trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
 #####
+rownames(trefle)
 
 trefle = trefle %>%
   filter(host != "Homo sapiens")
@@ -86,7 +87,7 @@ communi.func<- function(virus,host,row_ID,arg){
   })
   
 }
-n_iteration = nrow(unshared_asso)
+n_iteration = nrow(trefle)
 
 ncores =detectCores()
 print(ncores)
@@ -95,7 +96,7 @@ registerDoParallel(cores=(ncores-1))# Shows the number of Parallel Workers to be
 getDoParWorkers()# number of actual workers
 
 
-communicability_df = foreach(virus = unshared_asso$virus, host = unshared_asso$host, row_ID = row.names(unshared_asso), arg = lapply(1:n_iteration, function (x) ntw_base),.combine = rbind, .verbose = T) %dopar%{communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
+communicability_df = foreach(virus = trefle$virus, host = trefle$host, row_ID = row.names(trefle), arg = lapply(1:n_iteration, function (x) ntw_base),.combine = rbind, .verbose = T) %dopar%{communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
 
 write.csv(communicability_df, "output/importance_trefle_nosapiens_df.csv")
 
