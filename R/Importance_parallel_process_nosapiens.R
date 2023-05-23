@@ -32,8 +32,6 @@ G_trefle = communicability(uni_ntw_trefle)
 G_clover = communicability(uni_ntw_clover)
 ntw_base = list(uni_ntw_clover = uni_ntw_clover, uni_ntw_trefle = uni_ntw_trefle,
                 G_trefle = G_trefle, G_clover = G_clover)
-virus = shared_asso$virus[1]
-host = shared_asso$host[1]
 
 
 communi.func<- function(virus,host,row_ID,arg){

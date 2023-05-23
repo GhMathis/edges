@@ -37,20 +37,22 @@ communi.func<- function(virus,host,row_ID,arg){
     
     ID_virus = which(row.names(uni_ntw_clover) == virus)  
     ID_host = which(colnames(uni_ntw_clover) == host) 
-    uni_ntw_trefle[ID_virus,ID_host] = 0 # change the interaction (perturbation == zeta)
-    uni_ntw_trefle[ID_host,ID_virus] = 0 
+    ID_virus_t = which(row.names(uni_ntw_trefle) == virus)  
+    ID_host_t = which(colnames(uni_ntw_trefle) == host)
+    uni_ntw_trefle[ID_virus_t,ID_host_t] = 0 # change the interaction (perturbation == zeta)
+    uni_ntw_trefle[ID_host_t,ID_virus_t] = 0 
     uni_ntw_clover[ID_virus,ID_host] = 0
     uni_ntw_clover[ID_host,ID_virus] = 0
-
+    
     G_zeta_trefle = communicability(uni_ntw_trefle)
-
+    
     G_zeta_clover = communicability(uni_ntw_clover)
     
-    uni_ntw_trefle[ID_virus,ID_host] = 1  # remove the change
-    uni_ntw_trefle[ID_host,ID_virus] = 1 
+    uni_ntw_trefle[ID_virus_t,ID_host_t] = 1  # remove the change
+    uni_ntw_trefle[ID_host_t,ID_virus_t] = 1 
     uni_ntw_clover[ID_virus,ID_host] = 1
     uni_ntw_clover[ID_host,ID_virus] = 1
-
+    
     G_delta_trefle = G_trefle-G_zeta_trefle
     G_delta_clover = G_clover-G_zeta_clover
     
