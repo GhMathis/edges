@@ -37,28 +37,38 @@ main_theme = theme_bw()+
 ```
 
 ```{r}
+# data with sapiens
 imputed_association = read.csv("data/imputed_associations.csv")
-
+nrow(read.csv("output/importance_unshared_df.csv"))
 importance_trefle_df = read.csv("output/importance_unshared_df.csv")
 importance_trefle_df$status = "imputed associations"
 
 importance_df = read.csv("output/importance_df.csv")
 importance_df$status = "observed associations"
-str(importance_df)
-str(importance_trefle_df)
 
+# data whitout sapiens
+
+importance_trefle_nosapiens_df = read.csv("output/importance_trefle_nosapiens_df.csv")
+importance_nosapiens_df = read.csv("output/importance_nosapiens_df.csv")
+importance_trefle_nosapiens_df$status = "imputed associations"
+v = importance_trefle_nosapiens_df$virus
+h = importance_trefle_nosapiens_df$host
+ID = which(paste(v,h) %in% paste(importance_nosapiens_df$virus, importance_nosapiens_df$host))
+importance_trefle_nosapiens_df$status[ID] = "observed associations"
+importance_nosapiens_df[ID,]
+plot(importance_nosapiens_df$importance_trefle_nrmlz, importance_trefle_nosapiens_df$importance_trefle_nrmlz[ID])
 clover = read.csv("data/clover.csv")
-str(clover)
 
-#
+# joint to have association proba and importance in same the df
 str(imputed_association)
 imputed_association = imputed_association%>%
   full_join(importance_trefle_df,by =c("host", "virus"))
 str(imputed_association)
-#
+
+# Imuted + observed associations
 importance_trefle_df = rbind(importance_trefle_df, importance_df[,names(importance_df) %in% names(importance_trefle_df)])
 
-
+str(importance_trefle_df)
 ```
 
 ```{r}
@@ -75,6 +85,7 @@ ggplot(imputed_association)+
   geom_smooth(aes(importance_trefle_nrmlz,evidence),method = "lm")+
   scale_y_log10()+
   main_theme
+
 
 m1 = lm(log(evidence)~G_pq_trefle_nrmlz, data = imputed_association)
 m2 = lm(log(evidence)~importance_trefle_nrmlz, data = imputed_association)
@@ -94,6 +105,8 @@ AIC(m12)
 
 ```{r}
 str(importance_trefle_df)
+
+# I~G
 gg_trefle = ggplot(importance_trefle_df)+
   geom_point(aes(G_pq_trefle_nrmlz, importance_trefle_nrmlz,col = status), cex = 2, alpha =0.2)+
   geom_text_repel(data=subset(importance_trefle_df, G_pq_trefle_nrmlz > 0.6),
@@ -103,23 +116,53 @@ gg_trefle = ggplot(importance_trefle_df)+
             max.overlaps =1000)+
   labs(x ="G trefle", y= "I trefle")+
   main_theme
-hist_I = ggplot(importance_trefle_df)+
-  geom_density(aes(importance_trefle_nrmlz),alpha = 0.2, stat = "density")+
+#valus distribution of I
+hist_I = ggplot()+
+  geom_density(data = importance_trefle_df, aes(importance_trefle_nrmlz),alpha = 0.2, stat = "density")+
   labs(x ="Importance", y= "Density") +
   main_theme
-hist_G =ggplot(importance_trefle_df)+
-  geom_density(aes(G_pq_trefle_nrmlz),alpha = 0.2, stat = "density")+
+#valus distribution of G
+hist_G =ggplot()+
+  geom_density(data = importance_trefle_df, aes(G_pq_trefle_nrmlz),alpha = 0.2, stat = "density")+
   labs(x ="Communicability", y= "Density") +
   
   main_theme
 gg_trefle
 hist_I
 hist_G
-str(importance_trefle_df)
+
 ggplot(importance_trefle_df)+
-  geom_point(aes(G_pq_trefle_nrmlz, f_norm_G_trefle ,col = status), cex = 2, alpha =0.2)
+  geom_point(aes(G_pq_trefle_nrmlz, f_norm_G_trefle ,col = status), cex = 2, alpha =0.2)+
+  main_theme
 ggplot(importance_trefle_df)+
-  geom_point(aes(z_score_G_trefle, z_score_I_trefle ,col = status), cex = 2, alpha =0.2)
+  geom_point(aes(z_score_G_trefle, z_score_I_trefle ,col = status), cex = 2, alpha =0.2)+
+  main_theme
+
+# no sapiens
+
+gg_trefle_nosap = ggplot(importance_trefle_nosapiens_df)+
+  geom_point(aes(G_pq_trefle_nrmlz, importance_trefle_nrmlz,col = status), cex = 2, alpha =0.2)+
+  geom_text_repel(data=subset(importance_trefle_df, G_pq_trefle_nrmlz > 0.6),
+            aes(G_pq_trefle_nrmlz,importance_trefle_nrmlz, label = paste(host, "(", virus, ")", sep = "")),
+            size=3,
+            box.padding = unit(0.5, "lines"),
+            max.overlaps =1000)+
+  labs(x ="G trefle", y= "I trefle")+
+  main_theme
+#valus distribution of I
+hist_I + geom_density(data = importance_trefle_nosapiens_df,
+                      aes(importance_trefle_nrmlz),col = "red", stat = "density")+
+  labs(x ="Importance", y= "Density") +
+  main_theme
+#valus distribution of G
+hist_G +  geom_density(data = importance_trefle_nosapiens_df,
+                       aes(G_pq_trefle_nrmlz),col = "red", stat = "density")+
+  labs(x ="Communicability", y= "Density") +
+  main_theme
+
+gg_trefle_nosap
+hist_I_nosap
+hist_G_nosap
 ```
 
 ### test
@@ -148,17 +191,19 @@ z_score_I_trefle =(G_delta_trefle[ID_virus,ID_host]-mean(G_delta_trefle))/sd(G_d
     
 
 ```
-### most importante order
+### most importante order with homo sap.
 ```{r}
 
 importance_trefle_df$HostOrder= "_"
 importance_trefle_df$VirusOrder= "_"
 importance_trefle_df$host = as.factor(importance_trefle_df$host)
 importance_trefle_df$virus = as.factor(importance_trefle_df$virus)
+# attribue host order
 for(h in as.character(levels(importance_trefle_df$hos))){
   HO = clover$HostOrder[which(clover$Host == h)[1]]
   importance_trefle_df$HostOrder[importance_trefle_df$host == h]= as.character(HO)
 }
+# attribue virus order
 for(h in as.character(levels(importance_trefle_df$virus))){
   VO = clover$VirusOrder[which(clover$Virus == h)[1]]
   importance_trefle_df$VirusOrder[importance_trefle_df$virus == h]= as.character(VO)
@@ -166,10 +211,250 @@ for(h in as.character(levels(importance_trefle_df$virus))){
 
 importance_max_subset = subset(importance_trefle_df, importance_trefle_df$G_pq_trefle_nrmlz>0.5)
 str(importance_max_subset)
-importance_count_hostOrder = importance_max_subset%>%
-  select(HostOrder)%>%
-  count(HostOrder)
-ggplot(importance_max_subset, aes(HostOrder))+
-  geom_bar(stat = "count")
+
+# ordering levels of most importante order for bar plot
+importance_max_subset$HostOrder = as.factor(importance_max_subset$HostOrder)
+importance_max_subset$HostOrder= factor(importance_max_subset$HostOrder, levels = as.character(importance_max_subset%>%
+  group_by(HostOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(HostOrder)))
+
+levels(importance_max_subset$HostOrder)
+bar1 = ggplot(importance_max_subset, aes(HostOrder))+
+  geom_bar(stat = "count")+
+  main_theme+
+  theme(axis.text.x = element_text(angle =45, hjust = 1))
+
+# ordering levels for n sp./ order count in all order
+importance_trefle_df$HostOrder= factor(importance_trefle_df$HostOrder, levels = as.character(importance_trefle_df%>%
+  group_by(HostOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(HostOrder)))
+bar2 = ggplot(importance_trefle_df, aes(HostOrder))+
+  geom_bar(stat = "count")+
+   geom_bar(data = importance_trefle_df[importance_trefle_df$HostOrder %in% unique(importance_max_subset$HostOrder),],aes(HostOrder),stat = "count",col ="red")+
+  main_theme+
+   theme(axis.text.x = element_text(angle =45,hjust = 1))
+
+ggarrange(bar1,bar2)
+
 ```
+### most importante order without homo sap.
+```{r}
+
+importance_trefle_nosapiens_df$HostOrder= "_"
+importance_trefle_nosapiens_df$VirusOrder= "_"
+importance_trefle_nosapiens_df$host = as.factor(importance_trefle_nosapiens_df$host)
+importance_trefle_nosapiens_df$virus = as.factor(importance_trefle_nosapiens_df$virus)
+# attribue host order
+for(h in as.character(levels(importance_trefle_nosapiens_df$hos))){
+  HO = clover$HostOrder[which(clover$Host == h)[1]]
+  importance_trefle_nosapiens_df$HostOrder[importance_trefle_nosapiens_df$host == h]= as.character(HO)
+}
+# attribue virus order
+for(h in as.character(levels(importance_trefle_nosapiens_df$virus))){
+  VO = clover$VirusOrder[which(clover$Virus == h)[1]]
+  importance_trefle_nosapiens_df$VirusOrder[importance_trefle_nosapiens_df$virus == h]= as.character(VO)
+}
+
+importance_max_subset_nosap = subset(importance_trefle_nosapiens_df, importance_trefle_nosapiens_df$G_pq_trefle_nrmlz>0.6)
+str(importance_max_subset_nosap)
+
+# ordering levels of most importante order for bar plot
+importance_max_subset_nosap$HostOrder = as.factor(importance_max_subset_nosap$HostOrder)
+importance_max_subset_nosap$HostOrder= factor(importance_max_subset_nosap$HostOrder, levels = as.character(importance_max_subset_nosap%>%
+  group_by(HostOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(HostOrder)))
+
+levels(importance_max_subset_nosap$HostOrder)
+bar1 = ggplot(importance_max_subset_nosap, aes(HostOrder))+
+  geom_bar(stat = "count")+
+  main_theme+
+ theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+# ordering levels for n sp./ order count in all order
+importance_trefle_nosapiens_df$HostOrder= factor(importance_trefle_nosapiens_df$HostOrder, levels = as.character(importance_trefle_nosapiens_df%>%
+  group_by(HostOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(HostOrder)))
+bar2 = ggplot(importance_trefle_nosapiens_df, aes(HostOrder, fill = VirusOrder))+
+  geom_bar(stat = "count")+
+  geom_bar(data = importance_trefle_nosapiens_df[importance_trefle_nosapiens_df$HostOrder %in% unique(importance_max_subset_nosap$HostOrder),],aes(HostOrder),stat = "count",col ="red",size =2)+
+  main_theme+
+   theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+ggarrange(bar1,bar2)
+
+# ordering levels of most importante order Virus for bar plot
+importance_max_subset_nosap$VirusOrder = as.factor(importance_max_subset_nosap$VirusOrder)
+importance_max_subset_nosap$VirusOrder= factor(importance_max_subset_nosap$VirusOrder, levels = as.character(importance_max_subset_nosap%>%
+  group_by(VirusOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(VirusOrder)))
+
+levels(importance_max_subset_nosap$VirusOrder)
+bar1_virus = ggplot(importance_max_subset_nosap, aes(VirusOrder))+
+  geom_bar(stat = "count")+
+  main_theme+
+ theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+# ordering levels for n sp./ order count in all Virus order
+importance_trefle_nosapiens_df$VirusOrder= factor(importance_trefle_nosapiens_df$VirusOrder, levels = as.character(importance_trefle_nosapiens_df%>%
+  group_by(VirusOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(VirusOrder)))
+bar2_virus = ggplot(importance_trefle_nosapiens_df, aes(VirusOrder))+
+  geom_bar(stat = "count")+
+  geom_bar(data = importance_trefle_nosapiens_df[importance_trefle_nosapiens_df$VirusOrder %in% unique(importance_max_subset_nosap$VirusOrder),],aes(VirusOrder),stat = "count",col ="red",size =2)+
+  main_theme+
+   theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+ggarrange(bar1_virus,bar2_virus)
+str(importance_trefle_nosapiens_df)
+mod = lm(G_pq_trefle_nrmlz~HostOrder+VirusOrder, data=importance_trefle_nosapiens_df)
+par(mfrow = c(2,2))
+plot(mod)
+par(mfrow = c(1,1))
+hist(mod$residuals)
+Anova(mod,type = "II")
+summary(mod)
+```
+### most importante species without homo sap.
+```{r}
+str(importance_max_subset_nosap)
+# ordering levels of most importante sp. for bar plot
+# host
+importance_max_subset_nosap$host = as.factor(importance_max_subset_nosap$host)
+importance_max_subset_nosap$host= factor(importance_max_subset_nosap$host, levels = as.character(importance_max_subset_nosap%>%
+  group_by(host)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(host)))
+
+levels(importance_max_subset_nosap$host)
+bar_host_nosap = ggplot(importance_max_subset_nosap, aes(HostOrder, fill = host))+
+  geom_bar(stat = "count")+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+# virus
+importance_max_subset_nosap$virus = as.factor(importance_max_subset_nosap$virus)
+importance_max_subset_nosap$virus= factor(importance_max_subset_nosap$virus, levels = as.character(importance_max_subset_nosap%>%
+  group_by(virus)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(virus)))
+importance_max_subset_nosap$VirusOrder = as.factor(importance_max_subset_nosap$VirusOrder)
+importance_max_subset_nosap$VirusOrder= factor(importance_max_subset_nosap$VirusOrder, levels = as.character(importance_max_subset_nosap%>%
+  group_by(VirusOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(VirusOrder)))
+
+
+levels(importance_max_subset_nosap$virus)
+bar_virus_nosap = ggplot(importance_max_subset_nosap, aes(VirusOrder, fill=host))+
+  geom_bar(stat = "count")+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+bar_virus_nosap
+bar_host_nosap
+str(importance_max_subset_nosap)
+importance_subset_nosap_import = importance_max_subset_nosap%>%
+  select(c("X", "virus", "host","G_pq_trefle_nrmlz","importance_trefle_nrmlz","status", "HostOrder", "VirusOrder"))
+str(importance_subset_nosap_import)
+```
+### Explain why some order a less représented in top commicability sp (no spaiens)
+```{r}
+# first : host representation in each quartiles of communicability
+Q = quantile(importance_trefle_nosapiens_df$G_pq_trefle_nrmlz)
+
+
+q1 = which(importance_trefle_nosapiens_df$G_pq_trefle_nrmlz< Q[2])
+q2 = which(importance_trefle_nosapiens_df$G_pq_trefle_nrmlz>= Q[2] & importance_trefle_nosapiens_df$G_pq_trefle_nrmlz< Q[3])
+q3 = which(importance_trefle_nosapiens_df$G_pq_trefle_nrmlz>= Q[3] & importance_trefle_nosapiens_df$G_pq_trefle_nrmlz< Q[4])
+q4 = which(importance_trefle_nosapiens_df$G_pq_trefle_nrmlz> Q[4])
+
+importance_trefle_nosapiens_df$quantiles[q1] = "q1"
+importance_trefle_nosapiens_df$quantiles[q2] = "q2"
+importance_trefle_nosapiens_df$quantiles[q3] = "q3"
+importance_trefle_nosapiens_df$quantiles[q4] = "q4"
+
+# ordering levels of most importante order for bar plot
+importance_trefle_nosapiens_df$HostOrder = as.factor(importance_trefle_nosapiens_df$HostOrder)
+importance_trefle_nosapiens_df$HostOrder= factor(importance_trefle_nosapiens_df$HostOrder, levels = as.character(importance_trefle_nosapiens_df%>%
+  group_by(HostOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(HostOrder)))
+ggplot(importance_trefle_nosapiens_df,aes(HostOrder))+
+  geom_bar(stat = "count")+
+  facet_wrap(~quantiles)+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+#virus representation in each quartiles of communicability
+
+
+# ordering levels of most importante order for bar plot
+importance_trefle_nosapiens_df$VirusOrder = as.factor(importance_trefle_nosapiens_df$VirusOrder)
+importance_trefle_nosapiens_df$VirusOrder= factor(importance_trefle_nosapiens_df$VirusOrder, levels = as.character(importance_trefle_nosapiens_df%>%
+  group_by(VirusOrder)%>%
+  count()%>%
+  arrange(n)%>%
+  pull(VirusOrder)))
+ggplot(importance_trefle_nosapiens_df,aes(VirusOrder))+
+  geom_bar(stat = "count")+
+  facet_wrap(~quantiles)+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+ggplot()+
+  geom_bar(data = importance_trefle_nosapiens_df,aes(VirusOrder),stat = "count")+
+  geom_bar(data = importance_trefle_nosapiens_df[importance_trefle_nosapiens_df$HostOrder == "Chiroptera",], aes(VirusOrder),col = "blue" ,stat = "count")+
+  facet_wrap(~quantiles)+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+# second : hostorder link number
+ntw_trefle = matrix.associations(trefle$virus, trefle$host)
+str(ntw_trefle)
+colnames(ntw_trefle)
+v_deegre = rowSums(ntw_trefle)
+h_deegre = colSums(ntw_trefle)
+importance_trefle_nosapiens_df = importance_trefle_nosapiens_df%>%
+  mutate(v_deegre = sapply(virus, function(x) v_deegre[names(v_deegre)==x]))
+importance_trefle_nosapiens_df = importance_trefle_nosapiens_df%>%
+  mutate(h_deegre = sapply(host, function(x) h_deegre[names(h_deegre)==x]))
+
+ggplot()+
+  geom_boxplot(data = importance_trefle_nosapiens_df,aes(HostOrder, h_deegre))+
+  facet_wrap(~quantiles)+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+ggplot()+
+  geom_boxplot(data = importance_trefle_nosapiens_df,aes(quantiles, h_deegre))+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+ggplot()+
+  geom_point(data = importance_trefle_nosapiens_df,aes(G_pq_trefle_nrmlz, h_deegre))+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+ggplot()+
+  geom_boxplot(data = importance_trefle_nosapiens_df,aes(HostOrder, v_deegre))+
+  facet_wrap(~quantiles)+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+
+```
+
 
