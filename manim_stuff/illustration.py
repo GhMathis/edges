@@ -47,50 +47,53 @@ class Networks(Scene):
         
         return(verte_col_pos)
     def construct(self):
-        adj_arr = np.array([[0, 1, 0, 1, 0, 1, 0, 1, 1, 0],
-                            [1, 0, 0, 1, 0, 1, 1, 0, 1, 1],
-                            [0, 0, 0, 0, 0, 0, 1, 1, 0, 0],
-                            [1, 1, 0, 0, 0, 0, 1, 1, 1, 1],
-                            [0, 0, 0, 0, 0, 1, 1, 0, 1, 1],
-                            [1, 1, 0, 0, 1, 0, 1, 0, 0, 0],
-                            [0, 1, 1, 1, 1, 1, 0, 0, 1, 1],
-                            [1, 0, 1, 1, 0, 0, 0, 0, 0, 0],
-                            [1, 1, 0, 1, 1, 0, 1, 0, 0, 1],
-                            [0, 1, 0, 1, 1, 0, 1, 0, 1, 0]])
+        cbPalette = ["#999999", "#E69F00", "#56B4E9",
+                      "#009E73", "#F0E442", "#0072B2",
+                      "#D55E00", "#CC79A7"]
+        self.camera.background_color = "#FFFFFF"
         
+        adj_arr = np.array([[ 0, 0, 0, 1, 0],
+                            [ 0, 0, 0, 1, 1],
+                            [ 0, 0, 0, 1, 0],
+                            [ 1, 1, 1, 0, 0],
+                            [ 0, 1, 0, 0, 0]])
+        
+        
+        
+        
+        ##### Math, matrix and spectre computation
         spectra = np.linalg.eig(adj_arr)
-        ##### Setup the data for visualisations
         self.adj_to_list(adj_arr)
-        
         
         G_decomposition = lambda val, vec: np.dot(vec.T, vec)*np.exp(val)
         list_g_decomp = [G_decomposition(val, vec[np.newaxis]) for val, vec
                  in zip(spectra[0], spectra[1])]
         list_g_decomp[0] == list_g_decomp[0].T
+        
+        ##### aesthetics
+        partitions = [[i for i in range (3)], [i for i in range (3,5)]]
+        
+        vertex_config = {v:{"fill_color": cbPalette[1]} for v in 
+                          [i for i in range (5)]}
+        
 
         ##### Object creation
         #lyt = nx.bipartite_layout(self.vertices, self.vertices[:2])
-
+        
         meta_ntw = [Graph(vertices = self.vertices,
                          edges = self.edges,
                          labels =True,
-                         layout = "kamada_kawai",
-                         edge_config = self.egde_color(g_decomp)).scale(0.5) for g_decomp
-                    in list_g_decomp[:5]]
-        
-        meta_ntw2 = [Graph(vertices = self.vertices,
-                         edges = self.edges,
-                         labels =True,
-                         layout = "kamada_kawai",
-                         vertex_config = self.verte_color( vec*np.exp(val))).scale(0.5) for val, vec
-                    in zip(spectra[0][:5], spectra[1][:5])]
+                         layout = "partite",
+                         partitions = partitions ,
+                         vertex_config = vertex_config,#self.verte_color( vec*np.exp(val))
+                         edge_config = self.egde_color(g_decomp)) for val, vec, g_decomp
+                    in zip(spectra[0][:5], spectra[1][:5],list_g_decomp[:5])]
 
-        r1 = VGroup(*meta_ntw).arrange()
-        r2 = VGroup(*meta_ntw2).arrange()
+
+        r1 = VGroup(*meta_ntw)
+
         
-        self.play(LaggedStart(Create(VGroup(r1,r2).arrange(direction=DOWN)),
-                              run_time=3))
-        self.wait(2)
+        self.add(r1.arrange(direction=RIGHT))
     
         
-#python -m manim -pql graph_anime.py Networks
+#python -m manim -psqh illustration.py Networks
