@@ -32,6 +32,9 @@ G_trefle = communicability(uni_ntw_trefle)
 G_clover = communicability(uni_ntw_clover)
 ntw_base = list(uni_ntw_clover = uni_ntw_clover, uni_ntw_trefle = uni_ntw_trefle,
                 G_trefle = G_trefle, G_clover = G_clover)
+virus = shared_asso$virus[1]
+host = shared_asso$host[1]
+
 
 communi.func<- function(virus,host,row_ID,arg){
   
@@ -41,8 +44,10 @@ communi.func<- function(virus,host,row_ID,arg){
     
     ID_virus = which(row.names(uni_ntw_clover) == virus)  
     ID_host = which(colnames(uni_ntw_clover) == host) 
-    uni_ntw_trefle[ID_virus,ID_host] = 0 # change the interaction (perturbation == zeta)
-    uni_ntw_trefle[ID_host,ID_virus] = 0 
+    ID_virus_t = which(row.names(uni_ntw_trefle) == virus)  
+    ID_host_t = which(colnames(uni_ntw_trefle) == host)
+    uni_ntw_trefle[ID_virus_t,ID_host_t] = 0 # change the interaction (perturbation == zeta)
+    uni_ntw_trefle[ID_host_t,ID_virus_t] = 0 
     uni_ntw_clover[ID_virus,ID_host] = 0
     uni_ntw_clover[ID_host,ID_virus] = 0
 
@@ -50,8 +55,8 @@ communi.func<- function(virus,host,row_ID,arg){
 
     G_zeta_clover = communicability(uni_ntw_clover)
     
-    uni_ntw_trefle[ID_virus,ID_host] = 1  # remove the change
-    uni_ntw_trefle[ID_host,ID_virus] = 1 
+    uni_ntw_trefle[ID_virus_t,ID_host_t] = 1  # remove the change
+    uni_ntw_trefle[ID_host_t,ID_virus_t] = 1 
     uni_ntw_clover[ID_virus,ID_host] = 1
     uni_ntw_clover[ID_host,ID_virus] = 1
 
@@ -133,6 +138,6 @@ getDoParWorkers()# number of actual workers
 
 communicability_df = foreach(virus = shared_asso$virus, host = shared_asso$host, row_ID = row.names(shared_asso), arg = lapply(1:n_iteration, function (x) ntw_base),.combine = rbind, .verbose = T) %dopar%{communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
 
-write.csv(communicability_df, "output/importance_homo_df.csv")
+write.csv(communicability_df, "output/importance_nosapiens_df.csv")
 
 
