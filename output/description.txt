@@ -1,0 +1,9 @@
+X : ID association
+virus
+host
+G_pq_trefle_nrmlz : communicability normalized (G)
+importance_trefle_nrmlz : importance normalized (I = G - dG)
+status
+HostOrder
+VirusOrder
+ntw : network origine of data
