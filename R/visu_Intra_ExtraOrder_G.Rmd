@@ -49,7 +49,8 @@ main_theme = theme_bw()+
 ```{r}
 intraOrder_importance_df = read.csv("output/intraOrder_importance_df.csv", header = T,
                                     stringsAsFactors = T)
-
+clover = read.csv("data/clover.csv", header = T,
+                                    stringsAsFactors = T)
 str(trefle)
 
 str(intraOrder_importance_df)
@@ -126,12 +127,6 @@ TukeyHSD(aov(mod_hostorder3))
 ```
 ### Proof of concept : wich order Primates impact have most impact on ?
 ```{r}
-A = matrix(c(0,0,1,1,0,
-             0,0,1,1,1,
-             1,1,0,1,0,
-             1,1,1,1,1,
-             0,1,0,1,0), nrow =5, ncol =5)
-A [-(4:5),-(4:5)]    
 str(intraOrder_importance_df)
 intraOrde_primate_subset = intraOrder_importance_df%>%
   filter(HostOrder_zeta == "Chiroptera")%>%
@@ -145,6 +140,55 @@ ggplot(intraOrde_primate_subset)+
   color_palette("pastel1")+
   main_theme
 
+
+```
+
+
+
+
+##### Test with data from Albery 2020
+```{r}
+# data setup
+load("data/Finaldf.Rdata")
+head(FinalHostMatrix)
+FinalHostMatrix = FinalHostMatrix[names(FinalHostMatrix) %in% c("Sp", "Sp2","hOrder.Sp2",
+                                                                "hOrder","VirusBinary","Phylo")]
+FinalHostMatrix$hOrder = as.factor(FinalHostMatrix$hOrder)
+FinalHostMatrix$hOrder.Sp2 = as.factor(FinalHostMatrix$hOrder.Sp2)
+levels(FinalHostMatrix$hOrder.Sp2) = c("Carnivora","Cetartiodactyla","Chiroptera","a","b","Lagomorpha","Perissodactyla","c","Primates","d","Rodentia")
+levels(FinalHostMatrix$hOrder) = c("Carnivora","Cetartiodactyla","Chiroptera","a","b","Lagomorpha","Perissodactyla","c","Primates","d","Rodentia")
+FinalHostMatrix = FinalHostMatrix[as.character(FinalHostMatrix$hOrder) %in% 
+                     levels(intraOrder_max_subset$HostOrder) &
+                     as.character(FinalHostMatrix$hOrder.Sp2) %in% levels(intraOrder_max_subset$HostOrder),]
+levels(FinalHostMatrix$Sp) = gsub("_"," ", levels(FinalHostMatrix$Sp))
+levels(FinalHostMatrix$Sp2) = gsub("_"," ", levels(FinalHostMatrix$Sp2))
+levels(FinalHostMatrix$Sp)[which(levels(FinalHostMatrix$Sp) %in% intraOrder_max_subset$host_zeta)]
+
+intraOrder_max_subset = intraOrder_importance_df%>%
+  group_by(HostOrder,zeta_pos)%>%
+  arrange(HostOrder_score)%>%
+  slice(1:50)
+str(intraOrder_importance_df)
+
+intraOrder_viralshare = FinalHostMatrix %>%
+  full_join(intraOrder_max_subset, by = c("Sp" = "host_zeta"))
+str(intraOrder_viralshare)
+intraOrder_viralshare =intraOrder_viralshare[!is.na(intraOrder_viralshare$HostOrder_score),]
+intraOrder_viralshare =intraOrder_viralshare[!is.na(intraOrder_viralshare$VirusBinary),]
+intraOrder_viralshare$VirusBinary = as.factor(intraOrder_viralshare$VirusBinary)
+intraOrder_viralshare$share = ifelse(intraOrder_viralshare$VirusBinary == 1 &
+                                    intraOrder_viralshare$hOrder == intraOrder_viralshare$hOrder.Sp2,
+                                     "intra", "extra or no share")
+ggplot(intraOrder_viralshare)+
+  geom_boxplot(aes(HostOrder,HostOrder_score,col= share),cex=2)+
+  #geom_point(aes(HostOrder,HostOrder_score,col= VirusBinary),cex=2)+
+  labs(y= "z-score of the modification", col = "virus share (binary)")+
+  facet_wrap(~zeta_pos)+
+  color_palette("pastel1")+
+  main_theme
+intraOrder_max_subset = as.data.frame(intraOrder_max_subset)
+head(as.data.frame(intraOrder_max_subset))
+levels(as.factor(FinalHostMatrix$hOrder.Sp2))
 
 ```
 
