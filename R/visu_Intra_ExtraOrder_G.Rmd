@@ -19,11 +19,11 @@ library(car)
 ```
 
 ```{r}
-temp = read.csv("output/intraOrder_importance_df1.csv", header = T)
+temp = read.csv("output/viral_host_sharing_G_df1.csv", header = T)
 for(i in 2:127){
-  temp = rbind(temp, read.csv(paste("output/intraOrder_importance_df",i,".csv",sep = ""), header = T))
+  temp = rbind(temp, read.csv(paste("output/viral_host_sharing_G_df",i,".csv",sep = ""), header = T))
 }
-write.csv(temp,"output/intraOrder_importance_global_df.csv")
+write.csv(temp,"output/viral_host_sharing_G_df.csv")
 for(v in as.character(levels(trefle$virus))){
   VO = clover$VirusOrder[which(clover$Virus == v)[1]]
   trefle$VirusOrder[trefle$virus == v]= as.character(VO)
@@ -101,6 +101,9 @@ intraOrder_max_subset = intraOrder_importance_df%>%
   group_by(HostOrder,zeta_pos)%>%
   arrange(HostOrder_score)%>%
   slice(1:50)
+# intraOrder_max_subset = intraOrder_importance_df%>%
+#   arrange(HostOrder_score)%>%
+#   slice(1:700)
 str(intraOrder_importance_df)
 intraOrder_max_subset[intraOrder_max_subset$HostOrder == "Chiroptera",]
 
@@ -143,6 +146,55 @@ ggplot(intraOrde_primate_subset)+
 
 ```
 
+##### Host viral sharing with communicabity
+```{r}
+viral_host_sharing_G_df = read.csv("output/viral_host_sharing_G_df.csv", header = T,
+                                   stringsAsFactors = T)
+
+viral_host_sharing_G_df$HostOrder_zeta= "_"
+viral_host_sharing_G_df$VirusOrder_zeta= "_"
+viral_host_sharing_G_df$host = as.factor(viral_host_sharing_G_df$host)
+viral_host_sharing_G_df$virus = as.factor(viral_host_sharing_G_df$virus)
+# attribue host order
+
+for(h in as.character(levels(viral_host_sharing_G_df$host))){
+  HO = clover$HostOrder[which(clover$Host == h)[1]]
+  viral_host_sharing_G_df$HostOrder_zeta[viral_host_sharing_G_df$host == h]= as.character(HO)
+}
+# attribue virus order
+for(v in as.character(levels(viral_host_sharing_G_df$virus))){
+  VO = clover$VirusOrder[which(clover$Virus == v)[1]]
+  viral_host_sharing_G_df$VirusOrder_zeta[viral_host_sharing_G_df$virus == v]= as.character(VO)
+}
+viral_host_sharing_G_df$zeta_pos = ifelse(viral_host_sharing_G_df$HostOrder==
+                                             viral_host_sharing_G_df$HostOrder_zeta,
+                                           "intra", "extra")
+
+host_sharing_max_subset = viral_host_sharing_G_df%>%
+  group_by(HostOrder,zeta_pos)%>%
+  arrange(score_intra_h)%>%
+  slice(1:50)
+ggplot(viral_host_sharing_G_df)+
+  geom_boxplot(aes(HostOrder,score_intra_h,col =zeta_pos),cex=2)+
+
+  labs(y= "Host sharing (with G)", col = "link removal (Host Order)")+
+  color_palette("pastel1")+
+  main_theme
+
+ggplot(host_sharing_max_subset)+
+  geom_boxplot(aes(HostOrder,score_intra_h,col =zeta_pos),cex=2)+
+
+  labs(y= "Host sharing (with G)", col = "link removal (Host Order)")+
+  color_palette("pastel1")+
+  main_theme
+str(host_sharing_max_subset)
+ggplot(viral_host_sharing_G_df)+
+  geom_boxplot(aes(HostOrder,score_extra_intra_h,col =zeta_pos),cex=2)+
+
+  labs(y= "Host sharing (with G)", col = "link removal (Host Order)")+
+  color_palette("pastel1")+
+  main_theme
+```
 
 
 
