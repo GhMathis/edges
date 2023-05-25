@@ -1,0 +1,151 @@
+---
+title: "Untitled"
+author: "MG"
+date: "2023-05-24"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggpubr)
+library(RColorBrewer)
+library(car)
+```
+
+```{r}
+temp = read.csv("output/intraOrder_importance_df1.csv", header = T)
+for(i in 2:127){
+  temp = rbind(temp, read.csv(paste("output/intraOrder_importance_df",i,".csv",sep = ""), header = T))
+}
+write.csv(temp,"output/intraOrder_importance_global_df.csv")
+for(v in as.character(levels(trefle$virus))){
+  VO = clover$VirusOrder[which(clover$Virus == v)[1]]
+  trefle$VirusOrder[trefle$virus == v]= as.character(VO)
+}
+ trefle%>%
+   count(VirusOrder)%>%
+   arrange(n)
+```
+
+```{r}
+main_theme = theme_bw()+
+  theme(line = element_blank(), 
+        axis.line = element_line(colour = "black"),
+        panel.border = element_blank(),
+        axis.ticks =  element_line(colour = "black"),
+        axis.text.x = element_text(colour = "black", size=17),
+        axis.text.y = element_text(colour = "black", size=17),
+        legend.title = element_text(colour = "black", size=17),
+        legend.text = element_text(colour = "black", size=15),
+        axis.title=element_text(size=15))
+```
+
+```{r}
+intraOrder_importance_df = read.csv("output/intraOrder_importance_df.csv", header = T,
+                                    stringsAsFactors = T)
+
+str(trefle)
+
+str(intraOrder_importance_df)
+summary(intraOrder_importance_df)
+
+ggplot(intraOrder_importance_df)+
+  geom_boxplot(aes(HostOrder,HostOrder_score))
+ggplot(intraOrder_importance_df)+
+  geom_boxplot(aes(VirusOrder,VirusOrder_score))
+
+intraOrder_importance_df$HostOrder_zeta= "_"
+intraOrder_importance_df$VirusOrder_zeta= "_"
+intraOrder_importance_df$host = as.factor(intraOrder_importance_df$host)
+intraOrder_importance_df$virus = as.factor(intraOrder_importance_df$virus)
+# attribue host order
+
+for(h in as.character(levels(intraOrder_importance_df$host))){
+  HO = clover$HostOrder[which(clover$Host == h)[1]]
+  intraOrder_importance_df$HostOrder_zeta[intraOrder_importance_df$host == h]= as.character(HO)
+}
+# attribue virus order
+for(v in as.character(levels(intraOrder_importance_df$virus))){
+  VO = clover$VirusOrder[which(clover$Virus == v)[1]]
+  intraOrder_importance_df$VirusOrder_zeta[intraOrder_importance_df$virus == v]= as.character(VO)
+}
+intraOrder_importance_df$zeta_pos = ifelse(intraOrder_importance_df$HostOrder==
+                                             intraOrder_importance_df$HostOrder_zeta,
+                                           "intra", "extra")
+ggplot(intraOrder_importance_df)+
+  geom_boxplot(aes(HostOrder,HostOrder_score, col = zeta_pos))
+ggplot(intraOrder_importance_df)+
+  geom_boxplot(aes(HostOrder,HostOrder_score))+
+  facet_wrap(~HostOrder_zeta)+
+  theme(axis.text.x = element_text(angle =45, hjust = 1))
+```
+
+```{r}
+ggplot(intraOrder_importance_df, aes(complet_score,HostOrder_score))+
+  geom_point()+
+  geom_abline(intercept= 0, slope = 1, "blue")+
+  main_theme
+```
+
+```{r}
+
+### 50 most impactfull modification wtih respect to host order and location of impacte (intra or extra order)
+intraOrder_max_subset = intraOrder_importance_df%>%
+  group_by(HostOrder,zeta_pos)%>%
+  arrange(HostOrder_score)%>%
+  slice(1:50)
+str(intraOrder_importance_df)
+intraOrder_max_subset[intraOrder_max_subset$HostOrder == "Chiroptera",]
+
+ggplot(intraOrder_max_subset)+
+  geom_boxplot(aes(HostOrder,HostOrder_score,col =zeta_pos),cex=2)+
+  #geom_point(aes(HostOrder,HostOrder_score, col =zeta_pos), cex=2, alpha = 0.2)+
+  labs(y= "z-score of the modification", col = "Host Order location of impact")+
+  color_palette("pastel1")+
+  main_theme
+
+mod_hostorder1 = lm(HostOrder_score~zeta_pos, data=intraOrder_max_subset)
+mod_hostorder2 = lm(HostOrder_score~HostOrder, data=intraOrder_max_subset)
+mod_hostorder3 = lm(HostOrder_score~HostOrder*zeta_pos, data=intraOrder_max_subset)
+plot(mod_hostorder3)
+hist(mod_hostorder3$residuals)
+anova(mod_hostorder1,mod_hostorder2, mod_hostorder3)
+
+AIC(mod_hostorder1)
+AIC(mod_hostorder2)
+AIC(mod_hostorder3)
+Anova(mod_hostorder3,type ="II")
+summary(mod_hostorder3)
+TukeyHSD(aov(mod_hostorder3))
+```
+### Proof of concept : wich order Primates impact have most impact on ?
+```{r}
+A = matrix(c(0,0,1,1,0,
+             0,0,1,1,1,
+             1,1,0,1,0,
+             1,1,1,1,1,
+             0,1,0,1,0), nrow =5, ncol =5)
+A [-(4:5),-(4:5)]    
+str(intraOrder_importance_df)
+intraOrde_primate_subset = intraOrder_importance_df%>%
+  filter(HostOrder_zeta == "Chiroptera")%>%
+  arrange(HostOrder_score)%>%
+  slice(1:1000)
+
+ggplot(intraOrde_primate_subset)+
+  geom_boxplot(aes(HostOrder,HostOrder_score),cex=2)+
+  #geom_point(aes(HostOrder,HostOrder_score, col =zeta_pos), cex=2, alpha = 0.2)+
+  labs(y= "z-score of the modification", col = "Host Order location of impact")+
+  color_palette("pastel1")+
+  main_theme
+
+
+```
+
+
