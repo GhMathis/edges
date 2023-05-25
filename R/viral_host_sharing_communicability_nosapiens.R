@@ -8,11 +8,11 @@ clover = read.csv("data/clover.csv", stringsAsFactors = T)
 trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 
 ##### 1000 interaction for testing /!\to be removed/!\
-#set.seed(1000)
-#ID = sample(nrow(clover), 1000)
-#clover = clover[ID, ]
+set.seed(1000)
+ID = sample(nrow(clover), 1000)
+clover = clover[ID, ]
 
-#trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
+trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
 #####
 
 
@@ -45,16 +45,19 @@ trefle$VirusOrder = as.character(trefle$VirusOrder)
 
 trefle_main_HostOrder = trefle %>%
   filter(HostOrder %in% c("Rodentia", "Primates", "Cetartiodactyla", "Carnivora",
-                          "Chiroptera", "Perissodactyla", "Lagomorpha"))
+                          "Chiroptera", "Perissodactyla", "Lagomorpha", "Diprotodontia",
+                           "Didelphimorphia", "Eulipotyphla"))
 trefle_main_VirusOrder = trefle %>%
   filter(VirusOrder %in% c("Bunyavirales", "Mononegavirales", "Herpesvirales", "Amarillovirales",
-                            "Picornavirales", "Reovirales", "Martellivirales") )
-
+                            "Picornavirales", "Reovirales", "Martellivirales","Chitovirales",
+                            "Piccovirales", "Zurhausenvirales"))
+str(trefle_main_VirusOrder)
 ntw_base = list(uni_ntw_trefle = uni_ntw_trefle,
                 G_trefle = G_trefle,
                 trefle_main_HostOrder = trefle_main_HostOrder,
                 trefle_main_VirusOrder = trefle_main_VirusOrder)
-
+virus = trefle$virus[1]
+host = trefle$host[1]
 communi.func<- function(virus,host,row_ID,arg){
   
   print(row_ID)
@@ -70,7 +73,7 @@ communi.func<- function(virus,host,row_ID,arg){
     
     uni_ntw_trefle[ID_virus,ID_host] = 1  # remove the change
     uni_ntw_trefle[ID_host,ID_virus] = 1
-    HO =unique(trefle_main_HostOrder$HostOrder)[1]
+    HO ="Didelphimorphia"
     
     ### Compute all z score for all group of Host and Virus order.
 
@@ -78,7 +81,7 @@ communi.func<- function(virus,host,row_ID,arg){
     score_extra_intra_h = c()
     score_intra_v =c()
     score_extra_intra_v = c()
-    
+    # HOST
     for(HO in unique(trefle_main_HostOrder$HostOrder)){
       all_host_per_order = trefle_main_HostOrder$host[trefle_main_HostOrder$HostOrder == HO]
       all_host_per_order_extra = trefle_main_HostOrder$host[!(trefle_main_HostOrder$HostOrder == HO)]
@@ -98,8 +101,9 @@ communi.func<- function(virus,host,row_ID,arg){
 
       score_extra_intra_h = c(score_extra_intra_h,temp)
     }
-    temp_v = c()
-    VO = unique(trefle_main_VirusOrder$VirusOrder)[2]
+length(score_extra_intra_v)
+length(unique(trefle_main_VirusOrder$VirusOrder))
+    # VIRUS
     for(VO in unique(trefle_main_VirusOrder$VirusOrder)){
       all_virus_per_order = trefle_main_VirusOrder$virus[trefle_main_VirusOrder$VirusOrder == VO]
       all_virus_per_order_extra = trefle_main_VirusOrder$virus[!(trefle_main_VirusOrder$VirusOrder == VO)]
@@ -168,13 +172,12 @@ print(ncores)
 registerDoParallel(cores=(ncores-1))# Shows the number of Parallel Workers to be used
 getDoParWorkers()# number of actual workers
 
-
-intraOrder_importance_df = foreach(virus = trefle$virus[iter], host = trefle$host[iter],
+viral_host_sharing_G_df = foreach(virus = trefle$virus[iter], host = trefle$host[iter],
                              row_ID = row.names(trefle)[iter],
                              arg = lapply(1:length(iter), function (x) ntw_base),
                              .combine = rbind, .verbose = T) %dopar%
   {communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
 
-write.csv(intraOrder_importance_df, paste("output/intraOrder_importance_df", array_id, ".csv", sep=""))
+write.csv(viral_host_sharing_G_df, paste("output/viral_host_sharing_G_df", array_id, ".csv", sep=""))
 
 
