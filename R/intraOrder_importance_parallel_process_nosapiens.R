@@ -8,11 +8,11 @@ clover = read.csv("data/clover.csv", stringsAsFactors = T)
 trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 
 ##### 1000 interaction for testing /!\to be removed/!\
-set.seed(1000)
-ID = sample(nrow(clover), 1000)
-clover = clover[ID, ]
-
-trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
+# set.seed(1000)
+# ID = sample(nrow(clover), 1000)
+# clover = clover[ID, ]
+# 
+# trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
 #####
 
 
