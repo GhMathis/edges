@@ -58,7 +58,7 @@ ntw_base = list(uni_ntw_trefle = uni_ntw_trefle,
                 trefle_main_VirusOrder = trefle_main_VirusOrder)
 virus = trefle$virus[1]
 host = trefle$host[1]
-communi.func<- function(virus,host,row_ID,arg){
+communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
   
   print(row_ID)
   
@@ -76,60 +76,57 @@ communi.func<- function(virus,host,row_ID,arg){
     HO ="Didelphimorphia"
     
     ### Compute all z score for all group of Host and Virus order.
-
+   
     score_intra_h =c()
-    score_extra_intra_h = c()
     score_intra_v =c()
-    score_extra_intra_v = c()
     # HOST
+    
+    # unique score for ALL orders out of the modification
+    all_host_extra_order= trefle_main_HostOrder$host[!(trefle_main_HostOrder$HostOrder == HostOrder_zeta)]
+    ID_extraOrder_h =  which(colnames(uni_ntw_trefle) %in% all_host_extra_order) 
+    score_extra_order_h =(mean(G_zeta_trefle[ID_extraOrder_h,ID_extraOrder_h]) -
+                            mean(G_trefle[ID_extraOrder_h,ID_extraOrder_h]))/sd(G_trefle[ID_extraOrder_h,ID_extraOrder_h])
+    # unique score for EACH orders 
     for(HO in unique(trefle_main_HostOrder$HostOrder)){
       all_host_per_order = trefle_main_HostOrder$host[trefle_main_HostOrder$HostOrder == HO]
-      all_host_per_order_extra = trefle_main_HostOrder$host[!(trefle_main_HostOrder$HostOrder == HO)]
+     
       # removed link host order
       ID_HostOrder_intra = which(colnames(uni_ntw_trefle) %in% all_host_per_order) 
-      #
-      ID_HostOrder_extra = which(colnames(uni_ntw_trefle) %in% all_host_per_order_extra) 
-      # ID_HostOrder = ID_HostOrder[ID_HostOrder != ID_host]
-      
+    
       ### group mean modification compaire to INTRA (itself)
       temp = (mean(G_zeta_trefle[ID_HostOrder_intra,ID_HostOrder_intra]) - mean(G_trefle[ID_HostOrder_intra,ID_HostOrder_intra]))/sd(G_trefle[ID_HostOrder_intra,ID_HostOrder_intra])
 
       score_intra_h = c(score_intra_h,temp)
-      
-      ### EXTRA group modification compare to INTRA groupe modification
-      temp = (mean(G_zeta_trefle[ID_HostOrder_extra,ID_HostOrder_extra]) - mean(G_trefle[ID_HostOrder_intra,ID_HostOrder_intra]))/sd(G_trefle[ID_HostOrder_intra,ID_HostOrder_intra])
-
-      score_extra_intra_h = c(score_extra_intra_h,temp)
     }
-length(score_extra_intra_v)
-length(unique(trefle_main_VirusOrder$VirusOrder))
+
     # VIRUS
+    
+    # unique score for ALL orders out of the modification
+    all_virus_extra_order= trefle_main_VirusOrder$virus[!(trefle_main_VirusOrder$VirusOrder == VirusOrder_zeta)]
+    ID_extraOrder_v =  which(colnames(uni_ntw_trefle) %in% all_virus_extra_order) 
+    score_extra_order_v =(mean(G_zeta_trefle[ID_extraOrder_v,ID_extraOrder_v]) - 
+                            mean(G_trefle[ID_extraOrder_v,ID_extraOrder_v]))/sd(G_trefle[ID_extraOrder_v,ID_extraOrder_v])
+    # unique score for EACH orders 
     for(VO in unique(trefle_main_VirusOrder$VirusOrder)){
       all_virus_per_order = trefle_main_VirusOrder$virus[trefle_main_VirusOrder$VirusOrder == VO]
-      all_virus_per_order_extra = trefle_main_VirusOrder$virus[!(trefle_main_VirusOrder$VirusOrder == VO)]
+
       
       # removed link virus order
       ID_VirusOrder_intra = which(colnames(uni_ntw_trefle) %in% all_virus_per_order) 
-      #
-      ID_VirusOrder_extra = which(colnames(uni_ntw_trefle) %in% all_virus_per_order_extra) 
-      # ID_VirusOrder = ID_VirusOrder[ID_VirusOrder != ID_virus]
-      
+    
       ## group mean modification compaire to INTRA (itself)
       temp = (mean(G_zeta_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]) - mean(G_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]))/sd(G_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra])
       
       score_intra_v = c(score_intra_v,temp)
-      
-      ### EXTRA group modification compare to INTRA groupe modification
-      temp = (mean(G_zeta_trefle[ID_VirusOrder_extra,ID_VirusOrder_extra]) - mean(G_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]))/sd(G_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra])
-
-      score_extra_intra_v = c(score_extra_intra_v,temp)
     }
     df = data.frame(HostOrder = unique(trefle_main_HostOrder$HostOrder),
-                    score_extra_intra_h = score_extra_intra_h, 
                     score_intra_h = score_intra_h, host_zeta = host,
                     VirusOrder = unique(trefle_main_VirusOrder$VirusOrder),
                     score_intra_v = score_intra_v, virus_zeta = virus,
-                    score_extra_intra_v = score_extra_intra_v)
+                    score_extra_order_h = score_extra_order_h,
+                    score_extra_order_v = score_extra_order_v,
+                    HostOrder_zeta = HostOrder_zeta,
+                    VirusOrder_zeta = VirusOrder_zeta)
     ##
   
 
@@ -171,12 +168,16 @@ ncores =detectCores()
 print(ncores)
 registerDoParallel(cores=(ncores-1))# Shows the number of Parallel Workers to be used
 getDoParWorkers()# number of actual workers
+clover[clover$Host == "Camelus dromedarius",]
 
 viral_host_sharing_G_df = foreach(virus = trefle$virus[iter], host = trefle$host[iter],
-                             row_ID = row.names(trefle)[iter],
-                             arg = lapply(1:length(iter), function (x) ntw_base),
-                             .combine = rbind, .verbose = T) %dopar%
-  {communi.func(virus = virus, host = host, row_ID = row_ID, arg=arg)}
+                                   HostOrder_zeta = trefle$HostOrder,
+                                   VirusOrder_zeta = trefle$VirusOrder,
+                                   row_ID = row.names(trefle)[iter],
+                                   arg = lapply(1:length(iter), function (x) ntw_base),
+                                   .combine = rbind, .verbose = T) %dopar%
+  {communi.func(virus = virus, host = host, HostOrder_zeta = HostOrder_zeta,
+                VirusOrder_zeta = VirusOrder_zeta, row_ID = row_ID, arg=arg)}
 
 write.csv(viral_host_sharing_G_df, paste("output/viral_host_sharing_G_df", array_id, ".csv", sep=""))
 
