@@ -4,7 +4,7 @@ author: "MG"
 date: "2023-05-24"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -19,11 +19,13 @@ library(car)
 ```
 
 ```{r}
-temp = read.csv("output/viral_host_sharing_G_df1.csv", header = T)
+temp = read.csv("output/intraOrder_importance_df1.csv", header = T)
 for(i in 2:127){
-  temp = rbind(temp, read.csv(paste("output/viral_host_sharing_G_df",i,".csv",sep = ""), header = T))
+  temp = rbind(temp, read.csv(paste("output/intraOrder_importance_df",i,".csv",sep = ""), header = T))
 }
-write.csv(temp,"output/viral_host_sharing_G_df.csv")
+str(temp)
+temp = temp[,-1]
+write.csv(temp,"output/intraOrder_importance_df.csv")
 for(v in as.character(levels(trefle$virus))){
   VO = clover$VirusOrder[which(clover$Virus == v)[1]]
   trefle$VirusOrder[trefle$virus == v]= as.character(VO)
@@ -49,39 +51,40 @@ main_theme = theme_bw()+
 ```{r}
 intraOrder_importance_df = read.csv("output/intraOrder_importance_df.csv", header = T,
                                     stringsAsFactors = T)
+intraOrder_importance_df = intraOrder_importance_df[,-1]
+str(intraOrder_importance_df)
 clover = read.csv("data/clover.csv", header = T,
                                     stringsAsFactors = T)
-str(trefle)
-
-str(intraOrder_importance_df)
-summary(intraOrder_importance_df)
-
-ggplot(intraOrder_importance_df)+
-  geom_boxplot(aes(HostOrder,HostOrder_score))
-ggplot(intraOrder_importance_df)+
-  geom_boxplot(aes(VirusOrder,VirusOrder_score))
-
-intraOrder_importance_df$HostOrder_zeta= "_"
-intraOrder_importance_df$VirusOrder_zeta= "_"
-intraOrder_importance_df$host = as.factor(intraOrder_importance_df$host)
-intraOrder_importance_df$virus = as.factor(intraOrder_importance_df$virus)
-# attribue host order
-
-for(h in as.character(levels(intraOrder_importance_df$host))){
-  HO = clover$HostOrder[which(clover$Host == h)[1]]
-  intraOrder_importance_df$HostOrder_zeta[intraOrder_importance_df$host == h]= as.character(HO)
-}
-# attribue virus order
-for(v in as.character(levels(intraOrder_importance_df$virus))){
-  VO = clover$VirusOrder[which(clover$Virus == v)[1]]
-  intraOrder_importance_df$VirusOrder_zeta[intraOrder_importance_df$virus == v]= as.character(VO)
-}
-intraOrder_importance_df$zeta_pos = ifelse(intraOrder_importance_df$HostOrder==
-                                             intraOrder_importance_df$HostOrder_zeta,
+str(intraOrder_importance_df$HostOrder)
+intraOrder_importance_df$zeta_HostOrder_location = ifelse(as.character(intraOrder_importance_df$HostOrder)==
+                                             as.character(intraOrder_importance_df$HostOrder_zeta),
                                            "intra", "extra")
-ggplot(intraOrder_importance_df)+
-  geom_boxplot(aes(HostOrder,HostOrder_score, col = zeta_pos))
-ggplot(intraOrder_importance_df)+
+intraOrder_importance_df$zeta_VirusOrder_location = ifelse(as.character(intraOrder_importance_df$VirusOrder)==
+                                             as.character(intraOrder_importance_df$VirusOrder_zeta),
+                                           "intra", "extra")
+str(temp)
+inra_vs_extra_subset = intraOrder_importance_df%>%
+  select(c("HostOrder_zeta","HostOrder_score","host_zeta" ,"score_extra_order_h",
+          "complet_score", "zeta_HostOrder_location"))%>%
+  filter(zeta_HostOrder_location =="intra")%>%
+  select(-c( "zeta_HostOrder_location"))%>%
+  pivot_longer(!c(1,3), names_to = "score_location", values_to = "score")
+str(inra_vs_extra_subset)
+inra_vs_extra_subset$score_location = as.factor(inra_vs_extra_subset$score_location)
+levels(inra_vs_extra_subset$score_location) = levels =c("all", "intra", "extra")
+
+inra_vs_extra_subset%>%
+  group_by(HostOrder_zeta,score_location)%>%
+  arrange(score)%>%
+  slice(1:100)%>%
+ggplot()+
+  geom_boxplot(aes(HostOrder_zeta, score, col = score_location))+
+  color_palette("pastel1")+
+  labs(col =c("score location") )+
+  main_theme+
+  theme(axis.text.x = element_text(angle =45, hjust = 1))
+  
+ggplot(inra_vs_extra_subset)+
   geom_boxplot(aes(HostOrder,HostOrder_score))+
   facet_wrap(~HostOrder_zeta)+
   theme(axis.text.x = element_text(angle =45, hjust = 1))
@@ -97,10 +100,57 @@ ggplot(intraOrder_importance_df, aes(complet_score,HostOrder_score))+
 ```{r}
 
 ### 50 most impactfull modification wtih respect to host order and location of impacte (intra or extra order)
-intraOrder_max_subset = intraOrder_importance_df%>%
+intraOrder_importance_df=intraOrder_importance_df%>%
+  arrange(HostOrder_score)
+intraOrder_importance_df$n = c(1:nrow(intraOrder_importance_df))
+
+ggplot(intraOrder_importance_df)+
+  geom_point(aes(n,HostOrder_score))
+### mean between extra, in order to not selelts extra that have most impact when silicing
+# geom_density to show the need of means
+intraOrder_importance_df%>%
   group_by(HostOrder,zeta_pos)%>%
   arrange(HostOrder_score)%>%
+  slice(1:50)%>%
+ggplot()+
+  geom_bar(aes(HostOrder_zeta, col = zeta_pos))+
+  facet_wrap(~HostOrder)
+intraOrder_importance_df%>%
+  group_by(HostOrder_zeta,zeta_pos)%>%
+  count()
+intraOrder_importance_df%>%
+  group_by(HostOrder_zeta,zeta_pos)
+intraOrder_importance_df%>%
+  group_by(HostOrder_zeta,zeta_pos)%>%
+  arrange(HostOrder_score)%>%
+  slice(1:50)%>%
+  #filter(HostOrder_zeta =="Chiroptera")%>%
+ggplot()+
+  geom_bar(aes(HostOrder, fill=zeta_pos))+
+  facet_wrap(~HostOrder_zeta)+
+  main_theme+
+  theme(axis.text.x = element_text(angle =45, hjust = 1))
+
+intraOrder_importance_df%>%
+  group_by(HostOrder_zeta,zeta_pos)%>%
+  arrange(HostOrder_score)%>%
+  slice(1:50)%>%
+  ggplot()+
+  geom_boxplot(aes(HostOrder_zeta,HostOrder_score, col = zeta_pos))+
+  geom_point(aes(HostOrder_zeta,HostOrder_score, col = zeta_pos))+
+  geom_jitter(aes(HostOrder_zeta,HostOrder_score, col = zeta_pos))+
+  main_theme
+
+intraOrder_importance_df = intraOrder_importance_df%>%
+   group_by(host_zeta,virus_zeta,zeta_pos)%>%
+  mutate(mean_h_score  = mean(HostOrder_score))
+str(intraOrder_importance_df)
+
+intraOrder_max_subset = intraOrder_importance_df%>%
+  group_by(HostOrder,zeta_pos)%>%
+  arrange(mean_h_score)%>%
   slice(1:50)
+
 # intraOrder_max_subset = intraOrder_importance_df%>%
 #   arrange(HostOrder_score)%>%
 #   slice(1:700)
@@ -108,11 +158,13 @@ str(intraOrder_importance_df)
 intraOrder_max_subset[intraOrder_max_subset$HostOrder == "Chiroptera",]
 
 ggplot(intraOrder_max_subset)+
-  geom_boxplot(aes(HostOrder,HostOrder_score,col =zeta_pos),cex=2)+
+  geom_boxplot(aes(HostOrder,mean_h_score,col =zeta_pos),cex=2)+
   #geom_point(aes(HostOrder,HostOrder_score, col =zeta_pos), cex=2, alpha = 0.2)+
   labs(y= "z-score of the modification", col = "Host Order location of impact")+
   color_palette("pastel1")+
   main_theme
+
+
 
 mod_hostorder1 = lm(HostOrder_score~zeta_pos, data=intraOrder_max_subset)
 mod_hostorder2 = lm(HostOrder_score~HostOrder, data=intraOrder_max_subset)
@@ -170,24 +222,60 @@ viral_host_sharing_G_df$zeta_pos = ifelse(viral_host_sharing_G_df$HostOrder==
                                              viral_host_sharing_G_df$HostOrder_zeta,
                                            "intra", "extra")
 
+viral_host_sharing_G_df=viral_host_sharing_G_df%>%
+  arrange(HostOrder_score)
+viral_host_sharing_G_df$n = c(1:nrow(viral_host_sharing_G_df))
+
+ggplot(viral_host_sharing_G_df)+
+  geom_density(aes(score_intra_h))
+
+ggplot(viral_host_sharing_G_df)+
+  geom_density(aes(score_extra_intra_h))
+
+str(viral_host_sharing_G_df)
+viral_host_sharing_G_df = viral_host_sharing_G_df%>%
+   group_by(host_zeta,virus_zeta,zeta_pos)%>%
+  mutate(mean_h_score  = mean(score_intra_h))
+
+
 host_sharing_max_subset = viral_host_sharing_G_df%>%
   group_by(HostOrder,zeta_pos)%>%
-  arrange(score_intra_h)%>%
+  arrange(mean_h_score)%>%
   slice(1:50)
+
 ggplot(viral_host_sharing_G_df)+
   geom_boxplot(aes(HostOrder,score_intra_h,col =zeta_pos),cex=2)+
 
   labs(y= "Host sharing (with G)", col = "link removal (Host Order)")+
   color_palette("pastel1")+
-  main_theme
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
 
 ggplot(host_sharing_max_subset)+
-  geom_boxplot(aes(HostOrder,score_intra_h,col =zeta_pos),cex=2)+
-
+  geom_boxplot(aes(HostOrder,mean_h_score,col =zeta_pos),cex=2)+
   labs(y= "Host sharing (with G)", col = "link removal (Host Order)")+
   color_palette("pastel1")+
-  main_theme
-str(host_sharing_max_subset)
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+
+viral_host_sharing_G_df%>%
+  filter(HostOrder_zeta %in% levels(HostOrder))%>%
+  group_by(HostOrder_zeta,HostOrder)%>%
+  arrange(score_intra_h)%>%
+  slice(1:50)%>%
+ggplot()+
+  geom_boxplot(aes(HostOrder,score_intra_h, col = zeta_pos),cex=2)+
+  facet_wrap(~HostOrder_zeta)+
+  labs(y= "Host sharing (with G)", col = "link removal (Host Order)")+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
+viral_host_sharing_G_df%>%
+  filter(HostOrder_zeta %in% levels(HostOrder))%>%
+  ggplot()+
+  geom_bar(aes(HostOrder, col = zeta_pos))+
+  facet_wrap(~HostOrder_zeta)
+
+
 ggplot(viral_host_sharing_G_df)+
   geom_boxplot(aes(HostOrder,score_extra_intra_h,col =zeta_pos),cex=2)+
 
@@ -202,46 +290,45 @@ ggplot(viral_host_sharing_G_df)+
 ```{r}
 # data setup
 load("data/Finaldf.Rdata")
+load("data/AllPredictions1b.Rdata")
+load("data/BAMList.Rdata")
+names(BAMList[["VirusBinary"]])
+names(AllPredictions1b)
+head(AllPredictions1b[[1]])
 head(FinalHostMatrix)
 FinalHostMatrix = FinalHostMatrix[names(FinalHostMatrix) %in% c("Sp", "Sp2","hOrder.Sp2",
                                                                 "hOrder","VirusBinary","Phylo")]
 FinalHostMatrix$hOrder = as.factor(FinalHostMatrix$hOrder)
 FinalHostMatrix$hOrder.Sp2 = as.factor(FinalHostMatrix$hOrder.Sp2)
-levels(FinalHostMatrix$hOrder.Sp2) = c("Carnivora","Cetartiodactyla","Chiroptera","a","b","Lagomorpha","Perissodactyla","c","Primates","d","Rodentia")
-levels(FinalHostMatrix$hOrder) = c("Carnivora","Cetartiodactyla","Chiroptera","a","b","Lagomorpha","Perissodactyla","c","Primates","d","Rodentia")
+levels(viral_host_sharing_G_df$HostOrder)
+levels(FinalHostMatrix$hOrder.Sp2) = c("Carnivora","Cetartiodactyla","Chiroptera","a","Eulipotyphla","Lagomorpha","Perissodactyla","c","Primates","d","Rodentia")
+levels(FinalHostMatrix$hOrder) = c("Carnivora","Cetartiodactyla","Chiroptera","a","Eulipotyphla","Lagomorpha",
+                                   "Perissodactyla","c","Primates","d","Rodentia")
+head(FinalHostMatrix)
+str(FinalHostMatrix)
+### select order
 FinalHostMatrix = FinalHostMatrix[as.character(FinalHostMatrix$hOrder) %in% 
-                     levels(intraOrder_max_subset$HostOrder) &
-                     as.character(FinalHostMatrix$hOrder.Sp2) %in% levels(intraOrder_max_subset$HostOrder),]
+                     levels(viral_host_sharing_G_df$HostOrder) &
+                     as.character(FinalHostMatrix$hOrder.Sp2) %in% levels(viral_host_sharing_G_df$HostOrder),]
 levels(FinalHostMatrix$Sp) = gsub("_"," ", levels(FinalHostMatrix$Sp))
 levels(FinalHostMatrix$Sp2) = gsub("_"," ", levels(FinalHostMatrix$Sp2))
-levels(FinalHostMatrix$Sp)[which(levels(FinalHostMatrix$Sp) %in% intraOrder_max_subset$host_zeta)]
+### select corresponding species
+ID1 = which(FinalHostMatrix$Sp %in% viral_host_sharing_G_df$host_zeta)
+length(ID1) ; length(FinalHostMatrix$Sp)
+ID2 = which(viral_host_sharing_G_df$host_zeta %in% FinalHostMatrix$Sp)
+length(ID2) ; length(viral_host_sharing_G_df$host_zeta)
+FinalHostMatrix = FinalHostMatrix[-ID1,]
+viral_host_sharing_G_subset = viral_host_sharing_G_df[-ID2,]
+str(FinalHostMatrix)
 
-intraOrder_max_subset = intraOrder_importance_df%>%
-  group_by(HostOrder,zeta_pos)%>%
-  arrange(HostOrder_score)%>%
-  slice(1:50)
-str(intraOrder_importance_df)
-
-intraOrder_viralshare = FinalHostMatrix %>%
-  full_join(intraOrder_max_subset, by = c("Sp" = "host_zeta"))
-str(intraOrder_viralshare)
-intraOrder_viralshare =intraOrder_viralshare[!is.na(intraOrder_viralshare$HostOrder_score),]
-intraOrder_viralshare =intraOrder_viralshare[!is.na(intraOrder_viralshare$VirusBinary),]
-intraOrder_viralshare$VirusBinary = as.factor(intraOrder_viralshare$VirusBinary)
-intraOrder_viralshare$share = ifelse(intraOrder_viralshare$VirusBinary == 1 &
-                                    intraOrder_viralshare$hOrder == intraOrder_viralshare$hOrder.Sp2,
-                                     "intra", "extra or no share")
-ggplot(intraOrder_viralshare)+
-  geom_boxplot(aes(HostOrder,HostOrder_score,col= share),cex=2)+
-  #geom_point(aes(HostOrder,HostOrder_score,col= VirusBinary),cex=2)+
-  labs(y= "z-score of the modification", col = "virus share (binary)")+
-  facet_wrap(~zeta_pos)+
-  color_palette("pastel1")+
-  main_theme
-intraOrder_max_subset = as.data.frame(intraOrder_max_subset)
-head(as.data.frame(intraOrder_max_subset))
-levels(as.factor(FinalHostMatrix$hOrder.Sp2))
-
+FinalHostMatrix%>%
+  group_by(hOrder,hOrder.Sp2)%>%
+  count()%>%
+ggplot()+
+  geom_bar(aes(hOrder,n), stat = "identity")+
+  facet_wrap(~hOrder.Sp2)+
+    main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
 ```
 
 
