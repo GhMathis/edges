@@ -19,13 +19,14 @@ library(car)
 ```
 
 ```{r}
-temp = read.csv("output/intraOrder_importance_df1.csv", header = T)
+temp = read.csv("output/viral_host_sharing_G_df1.csv", header = T)
 for(i in 2:127){
-  temp = rbind(temp, read.csv(paste("output/intraOrder_importance_df",i,".csv",sep = ""), header = T))
+  temp = rbind(temp, read.csv(paste("output/viral_host_sharing_G_df",i,".csv",sep = ""), header = T))
 }
 str(temp)
 temp = temp[,-1]
-write.csv(temp,"output/intraOrder_importance_df.csv")
+write.csv(temp,"output/viral_host_sharing_G_df.csv")
+
 for(v in as.character(levels(trefle$virus))){
   VO = clover$VirusOrder[which(clover$Virus == v)[1]]
   trefle$VirusOrder[trefle$virus == v]= as.character(VO)
@@ -55,7 +56,7 @@ intraOrder_importance_df = intraOrder_importance_df[,-1]
 str(intraOrder_importance_df)
 clover = read.csv("data/clover.csv", header = T,
                                     stringsAsFactors = T)
-str(intraOrder_importance_df$HostOrder)
+
 intraOrder_importance_df$zeta_HostOrder_location = ifelse(as.character(intraOrder_importance_df$HostOrder)==
                                              as.character(intraOrder_importance_df$HostOrder_zeta),
                                            "intra", "extra")
@@ -203,31 +204,34 @@ ggplot(intraOrde_primate_subset)+
 viral_host_sharing_G_df = read.csv("output/viral_host_sharing_G_df.csv", header = T,
                                    stringsAsFactors = T)
 
-viral_host_sharing_G_df$HostOrder_zeta= "_"
-viral_host_sharing_G_df$VirusOrder_zeta= "_"
-viral_host_sharing_G_df$host = as.factor(viral_host_sharing_G_df$host)
-viral_host_sharing_G_df$virus = as.factor(viral_host_sharing_G_df$virus)
-# attribue host order
+str(viral_host_sharing_G_df)
+viral_host_sharing_G_df = viral_host_sharing_G_df[,-1]
 
-for(h in as.character(levels(viral_host_sharing_G_df$host))){
-  HO = clover$HostOrder[which(clover$Host == h)[1]]
-  viral_host_sharing_G_df$HostOrder_zeta[viral_host_sharing_G_df$host == h]= as.character(HO)
-}
-# attribue virus order
-for(v in as.character(levels(viral_host_sharing_G_df$virus))){
-  VO = clover$VirusOrder[which(clover$Virus == v)[1]]
-  viral_host_sharing_G_df$VirusOrder_zeta[viral_host_sharing_G_df$virus == v]= as.character(VO)
-}
-viral_host_sharing_G_df$zeta_pos = ifelse(viral_host_sharing_G_df$HostOrder==
-                                             viral_host_sharing_G_df$HostOrder_zeta,
+
+viral_host_sharing_G_df$zeta_HostOrder_location = ifelse(as.character(viral_host_sharing_G_df$HostOrder)==
+                                             as.character(viral_host_sharing_G_df$HostOrder_zeta),
                                            "intra", "extra")
+viral_host_sharing_G_df$zeta_VirusOrder_location = ifelse(as.character(viral_host_sharing_G_df$VirusOrder)==
+                                             as.character(viral_host_sharing_G_df$VirusOrder_zeta),
+                                           "intra", "extra")
+str(viral_host_sharing_G_df)
+viral_host_sharing_G_df%>%
+  group_by(HostOrder,HostOrder_zeta)%>%
+  arrange(score_intra_h)%>%
+  slice(1:50)%>%
+ggplot()+
+  geom_boxplot(aes(HostOrder_zeta, score_intra_h, col = zeta_HostOrder_location))+
+  facet_wrap(~HostOrder)+
+  color_palette("pastel1")+
+  main_theme+
+  theme(axis.text.x = element_text(colour = "black", size=12,angle =45, hjust = 1))
 
+  
+
+head(viral_host_sharing_G_df)
 viral_host_sharing_G_df=viral_host_sharing_G_df%>%
   arrange(HostOrder_score)
 viral_host_sharing_G_df$n = c(1:nrow(viral_host_sharing_G_df))
-
-ggplot(viral_host_sharing_G_df)+
-  geom_density(aes(score_intra_h))
 
 ggplot(viral_host_sharing_G_df)+
   geom_density(aes(score_extra_intra_h))
