@@ -1,3 +1,4 @@
+library(svd)
 normalized = function(x) (x-min(x))/(max(x)-min(x))
 
 ##### From row ntw to matrice ntw (bipartie => non_square)
@@ -73,6 +74,27 @@ communicability<- function(A, spectra = NULL){
     temp = phi%*%t(phi)*exp(d[i])
     G = G + temp
   }
+  rownames(G)= rownames(A)
+  colnames(G)= colnames(A)
+  return(G)
+}
+ntw = matrix.associations(trefle$virus, trefle$host)
+str(ntw)
+communicability_svd <- function(A){
+  SVD = propack.svd(ntw)
+  U = SVD$u
+  V = SVD$v
+  str(V)
+  cosh(SVD$d[1])
+  sinh(SVD$d[1])
+  sinh(SVD$d)[1:20]
+  d_left =  diag(cosh(SVD$d))
+  d_right =  diag(sinh(SVD$d))
+  
+  G_left = U%*%d_left%*%t(U)
+  G_right = U%*%d_right%*%t(V)
+  G_svd = G_left - G_right
+  str(G_svd)
   rownames(G)= rownames(A)
   colnames(G)= colnames(A)
   return(G)
