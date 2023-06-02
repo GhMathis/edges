@@ -4,7 +4,7 @@ author: "MG"
 date: "2023-05-20"
 output: html_document
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 ```{r setup, include=FALSE}
@@ -39,7 +39,7 @@ main_theme = theme_bw()+
 ```{r}
 # data with sapiens
 imputed_association = read.csv("data/imputed_associations.csv")
-nrow(read.csv("output/importance_unshared_df.csv"))
+
 importance_trefle_df = read.csv("output/importance_unshared_df.csv")
 importance_trefle_df$status = "imputed associations"
 
@@ -50,13 +50,18 @@ importance_df$status = "observed associations"
 
 importance_trefle_nosapiens_df = read.csv("output/importance_trefle_nosapiens_df.csv")
 importance_nosapiens_df = read.csv("output/importance_nosapiens_df.csv")
-importance_trefle_nosapiens_df$status = "imputed associations"
+
 v = importance_trefle_nosapiens_df$virus
 h = importance_trefle_nosapiens_df$host
-ID = which(paste(v,h) %in% paste(importance_nosapiens_df$virus, importance_nosapiens_df$host))
-importance_trefle_nosapiens_df$status[ID] = "observed associations"
+
+ID = which(paste(v,h) %in% paste(imputed_association$virus, imputed_association$host))
+importance_trefle_nosapiens_df$status[ID] = "imputed associations"
+importance_trefle_nosapiens_df$status[-ID] = "observed associations"
 importance_nosapiens_df[ID,]
-plot(importance_nosapiens_df$importance_trefle_nrmlz, importance_trefle_nosapiens_df$importance_trefle_nrmlz[ID])
+
+
+
+plot(importance_nosapiens_df$importance_trefle_nrmlz, importance_trefle_nosapiens_df$importance_trefle_nrmlz[ID],)
 clover = read.csv("data/clover.csv")
 
 # joint to have association proba and importance in same the df
@@ -65,7 +70,7 @@ imputed_association = imputed_association%>%
   full_join(importance_trefle_df,by =c("host", "virus"))
 str(imputed_association)
 
-# Imuted + observed associations
+# Imputed + observed associations
 importance_trefle_df = rbind(importance_trefle_df, importance_df[,names(importance_df) %in% names(importance_trefle_df)])
 
 str(importance_trefle_df)
@@ -116,6 +121,7 @@ gg_trefle = ggplot(importance_trefle_df)+
             max.overlaps =1000)+
   labs(x ="G trefle", y= "I trefle")+
   main_theme
+importance_trefle_df[which(importance_trefle_df$importance_trefle_nrmlz <0.0001), c(1:3,6,7,12)]
 #valus distribution of I
 hist_I = ggplot()+
   geom_density(data = importance_trefle_df, aes(importance_trefle_nrmlz),alpha = 0.2, stat = "density")+
@@ -161,8 +167,8 @@ hist_G +  geom_density(data = importance_trefle_nosapiens_df,
   main_theme
 
 gg_trefle_nosap
-hist_I_nosap
-hist_G_nosap
+
+
 ```
 
 ### test

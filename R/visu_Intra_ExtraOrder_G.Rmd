@@ -25,7 +25,7 @@ for(i in 2:127){
 }
 str(temp)
 temp = temp[,-1]
-write.csv(temp,"output/viral_host_sharing_G_df.csv")
+write.csv(temp,"output/viral_host_sharing_G_df2.csv")
 
 temp = read.csv("output/intraOrder_importance_df1.csv", header = T)
 for(i in 2:127){
@@ -94,6 +94,9 @@ ggplot()+
   main_theme+
   theme(axis.text.x = element_text(angle =45, hjust = 1))
 
+#####
+viral_host_sharing_G_df = read.csv("output/viral_host_sharing_G_df.csv", header = T,
+                                    stringsAsFactors = T)
 str(viral_host_sharing_G_df)
 inra_vs_extra_sharing_subset = viral_host_sharing_G_df%>%
   select(c("HostOrder_zeta","score_intra_h","host_zeta" ,"score_extra_order_h",
