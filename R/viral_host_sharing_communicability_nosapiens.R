@@ -8,11 +8,11 @@ clover = read.csv("data/clover.csv", stringsAsFactors = T)
 trefle = read.csv("data/trefle.csv", stringsAsFactors = T)
 
 ##### 1000 interaction for testing /!\to be removed/!\
-set.seed(1000)
-ID = sample(nrow(clover), 1000)
-clover = clover[ID, ]
+#set.seed(1000)
+#ID = sample(nrow(clover), 1000)
+#clover = clover[ID, ]
 
-trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
+#trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
 #####
 
 
@@ -51,7 +51,7 @@ trefle_main_VirusOrder = trefle %>%
   filter(VirusOrder %in% c("Bunyavirales", "Mononegavirales", "Herpesvirales", "Amarillovirales",
                             "Picornavirales", "Reovirales", "Martellivirales","Chitovirales",
                             "Piccovirales", "Zurhausenvirales"))
-str(trefle_main_VirusOrder)
+
 ntw_base = list(uni_ntw_trefle = uni_ntw_trefle,
                 G_trefle = G_trefle,
                 trefle_main_HostOrder = trefle_main_HostOrder,
@@ -79,13 +79,17 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
    
     score_intra_h =c()
     score_intra_v =c()
+    score_global_h =c()
+    score_global_v =c()
     # HOST
     
     # unique score for ALL orders out of the modification
-    all_host_extra_order= trefle_main_HostOrder$host[!(trefle_main_HostOrder$HostOrder == HostOrder_zeta)]
-    ID_extraOrder_h =  which(colnames(uni_ntw_trefle) %in% all_host_extra_order) 
-    score_extra_order_h =(mean(G_zeta_trefle[ID_extraOrder_h,ID_extraOrder_h]) -
-                            mean(G_trefle[ID_extraOrder_h,ID_extraOrder_h]))/sd(G_trefle[ID_extraOrder_h,ID_extraOrder_h])
+    zeta_host_order= trefle_main_HostOrder$host[trefle_main_HostOrder$HostOrder == HostOrder_zeta]
+    ID_zetaOrder_h =  which(colnames(uni_ntw_trefle) %in% zeta_host_order)
+    
+    #compute z-score for all host order exept host order with the zeta modification 
+    score_extra_order_h =(mean(G_zeta_trefle[-ID_zetaOrder_h, -ID_zetaOrder_h]) -
+                            mean(G_trefle[-ID_zetaOrder_h, -ID_zetaOrder_h]))/sd(G_trefle)#[-ID_zetaOrder_h, -ID_zetaOrder_h])
     # unique score for EACH orders 
     for(HO in unique(trefle_main_HostOrder$HostOrder)){
       all_host_per_order = trefle_main_HostOrder$host[trefle_main_HostOrder$HostOrder == HO]
@@ -94,18 +98,23 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
       ID_HostOrder_intra = which(colnames(uni_ntw_trefle) %in% all_host_per_order) 
     
       ### group mean modification compaire to INTRA (itself)
-      temp = (mean(G_zeta_trefle[ID_HostOrder_intra,ID_HostOrder_intra]) - mean(G_trefle[ID_HostOrder_intra,ID_HostOrder_intra]))/sd(G_trefle[ID_HostOrder_intra,ID_HostOrder_intra])
+      temp = (mean(G_zeta_trefle[ID_HostOrder_intra,ID_HostOrder_intra]) - mean(G_trefle[ID_HostOrder_intra,ID_HostOrder_intra]))/sd(G_trefle)#[ID_HostOrder_intra,ID_HostOrder_intra])
 
       score_intra_h = c(score_intra_h,temp)
+      ### group mean modification compaire to the global communicability
+      temp = (mean(G_zeta_trefle[ID_HostOrder_intra,ID_HostOrder_intra]) - mean(G_zeta_trefle))/sd(G_zeta_trefle)
+      score_global_h = c(score_global_h,temp)
     }
-
+     all_host_per_order = trefle_main_HostOrder$host[trefle_main_HostOrder$HostOrder == HO]
     # VIRUS
     
-    # unique score for ALL orders out of the modification
-    all_virus_extra_order= trefle_main_VirusOrder$virus[!(trefle_main_VirusOrder$VirusOrder == VirusOrder_zeta)]
-    ID_extraOrder_v =  which(colnames(uni_ntw_trefle) %in% all_virus_extra_order) 
-    score_extra_order_v =(mean(G_zeta_trefle[ID_extraOrder_v,ID_extraOrder_v]) - 
-                            mean(G_trefle[ID_extraOrder_v,ID_extraOrder_v]))/sd(G_trefle[ID_extraOrder_v,ID_extraOrder_v])
+   # unique score for ALL orders out of the modification
+    zeta_virus_order= trefle_main_VirusOrder$virus[trefle_main_VirusOrder$VirusOrder == VirusOrder_zeta]
+    ID_zetaOrder_v =  which(colnames(uni_ntw_trefle) %in% zeta_virus_order)
+    
+    #compute z-score for all host order exept host order with the zeta modification 
+    score_extra_order_v =(mean(G_zeta_trefle[-ID_zetaOrder_v, -ID_zetaOrder_v]) -
+                            mean(G_trefle[-ID_zetaOrder_v, -ID_zetaOrder_v]))/sd(G_trefle)#[-ID_zetaOrder_v, -ID_zetaOrder_v])
     # unique score for EACH orders 
     for(VO in unique(trefle_main_VirusOrder$VirusOrder)){
       all_virus_per_order = trefle_main_VirusOrder$virus[trefle_main_VirusOrder$VirusOrder == VO]
@@ -115,9 +124,13 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
       ID_VirusOrder_intra = which(colnames(uni_ntw_trefle) %in% all_virus_per_order) 
     
       ## group mean modification compaire to INTRA (itself)
-      temp = (mean(G_zeta_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]) - mean(G_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]))/sd(G_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra])
+      temp = (mean(G_zeta_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]) - mean(G_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]))/sd(G_trefle)#[ID_VirusOrder_intra,ID_VirusOrder_intra])
       
       score_intra_v = c(score_intra_v,temp)
+      
+      ## group mean modification compaire to the global communicability
+      temp = (mean(G_zeta_trefle[ID_VirusOrder_intra,ID_VirusOrder_intra]) - mean(G_zeta_trefle))/sd(G_zeta_trefle)
+      score_global_v = c(score_global_v,temp)
     }
     df = data.frame(HostOrder = unique(trefle_main_HostOrder$HostOrder),
                     score_intra_h = score_intra_h, host_zeta = host,
@@ -126,7 +139,9 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
                     score_extra_order_h = score_extra_order_h,
                     score_extra_order_v = score_extra_order_v,
                     HostOrder_zeta = HostOrder_zeta,
-                    VirusOrder_zeta = VirusOrder_zeta)
+                    VirusOrder_zeta = VirusOrder_zeta,
+                    score_global_h = score_global_h,
+                    score_global_v = score_global_v)
     ##
   
 
@@ -168,7 +183,7 @@ ncores =detectCores()
 print(ncores)
 registerDoParallel(cores=(ncores-1))# Shows the number of Parallel Workers to be used
 getDoParWorkers()# number of actual workers
-clover[clover$Host == "Camelus dromedarius",]
+
 
 viral_host_sharing_G_df = foreach(virus = trefle$virus[iter], host = trefle$host[iter],
                                    HostOrder_zeta = trefle$HostOrder,
