@@ -17,26 +17,30 @@ main_theme = theme_bw()+
         axis.title=element_text(size=22))
 
 ###### Viral sharing #######
-intra_vs_extra_sharing_nosapiens = read.csv("output/intra_vs_extra_sharing_nosapiens.csv", header = T,
+host_subset = read.csv("output/intra_vs_extra_host_subset.csv", header = T,
                                    stringsAsFactors = T)
 
-intra_vs_extra_sharing_nosapiens = intra_vs_extra_sharing_subset
-intra_vs_extra_sharing_nosapiens$score_location = as.factor(intra_vs_extra_sharing_nosapiens$score_location)
-levels(intra_vs_extra_sharing_nosapiens$score_location) = levels =c("Intra + Extra Ordre",
-                                                                 "Extra Ordre", "Intra Ordre")
-str(intra_vs_extra_sharing_nosapiens)
+host_subset$score_location = as.factor(host_subset$score_location)
+levels(host_subset$score_location) = c("Extra Ordre", "Intra Ordre")
+str(host_subset)
 pal = brewer.pal(n =9, name = "OrRd")
-recap2 = intra_vs_extra_sharing_nosapiens%>%
-  filter(score_location != "Intra + Extra Ordre")%>%
+
+levels(host_subset$HostOrder_zeta)
+main_order = host_subset%>%
+  count(HostOrder_zeta)%>%
+  arrange(desc(n))%>%
+  slice(1:10)%>%
+  pull(HostOrder_zeta)
+recap2 = host_subset%>%
+  filter(HostOrder_zeta %in% unique(main_order))%>%
   group_by(score_location,HostOrder_zeta)%>%
   summarise(N    =length(score),
             mean_score = mean(score, na.rm=TRUE),
             sd_score = sd(score, na.rm=TRUE),
             se_score = sd_score / sqrt(N))
-
-intra_vs_extra_sharing_nosapiens%>%
-  filter(score_location != "Intra + Extra Ordre")%>%
-  ggplot()+
+host_subset%>%
+  filter(HostOrder_zeta %in% unique(main_order))%>%
+ggplot()+
   geom_sina(aes(HostOrder_zeta, score, col = score_location),scale = "width", position=position_dodge(0.5),
             maxwidth = 0.4, cex =2, alpha = 0.05)+
   geom_errorbar(data = recap2, aes(x= HostOrder_zeta, group = score_location,
