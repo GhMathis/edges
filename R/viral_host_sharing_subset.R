@@ -1,11 +1,12 @@
 library(tidyverse)
 
-temp = read.csv("output/viral_host_sharing_dG_df1.csv", header = T)
-for(i in 2:127){
+temp = read.csv("output/viral_host_sharing_dG_dftest.csv", header = T)
+for(i in 2:128){
   temp = rbind(temp, read.csv(paste("output/viral_host_sharing_dG_df",i,".csv",sep = ""), header = T))
 }
 str(temp)
 temp = temp[,-1]
+
 write.csv(temp,"output/viral_host_sharing_dG_df.csv")
 
 viral_host_sharing_dG_df = read.csv("output/viral_host_sharing_dG_df.csv", header = T,
@@ -13,10 +14,14 @@ viral_host_sharing_dG_df = read.csv("output/viral_host_sharing_dG_df.csv", heade
 trefle = read.csv("data/trefle.csv", header = T,
                                     stringsAsFactors = T)
 viral_host_sharing_dG_df = viral_host_sharing_dG_df[,-1]
-viral_host_sharing_dG_df$host = trefle$host[1:8959]
-viral_host_sharing_dG_df$virus = trefle$virus[1:8959]
-str(viral_host_sharing_dG_df)
+viral_host_sharing_dG_df = viral_host_sharing_dG_df%>%
+  arrange(X)
+all(viral_host_sharing_dG_df$X == 1:nrow(trefle[640:1279,]))
+viral_host_sharing_dG_df$host = trefle$host[640:1279]
+viral_host_sharing_dG_df$virus = trefle$virus[640:1279]
 
+str(viral_host_sharing_dG_df)
+tail(viral_host_sharing_dG_df)
 host_subset = viral_host_sharing_dG_df%>%
   select(ends_with("_h")| c("X","host","HostOrder_zeta"))
 str(host_subset)
