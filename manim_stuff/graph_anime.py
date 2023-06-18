@@ -9,25 +9,28 @@ from manim import *
 from manim.utils.color import Colors
 import numpy as np
 import networkx as nx
-import math
-
+import math as m
+from scipy.linalg import expm
 class Networks(Scene):
-    
+
+    config.background_color = WHITE
     def adj_to_list(self,adj_arr):
         """Converte an adjacency matrix in the form of list of vertices and edges
         vertices = list(v1, v2, v3,...)
         edges = list((v1, v2), (v3, v1),...) """
         
         ##### vertices conversion
-        self.vertices = np.arange(adj_arr.shape[0]).tolist()
+        vertices = np.arange(adj_arr.shape[0]).tolist()
         ID = np.triu_indices(adj_arr.shape[0])
         
         ##### Edges conversion
         adj_arr[ID] = 0
         edges_temp = np.where(adj_arr == 1)
-        self.edges = [(e1,e2) for e1,e2 in zip(edges_temp[0],edges_temp[1])]
+        edges = [(e1,e2) for e1,e2 in zip(edges_temp[0],edges_temp[1])]
+        return([vertices, edges])
     
     def egde_color(self,decompo_arr):
+        """Color depending on the communicability group"""
         ID = np.triu_indices(decompo_arr.shape[0],1)
         decompo_arr[ID] = 0
         pos_edges =  np.where(decompo_arr > 0)
@@ -37,8 +40,27 @@ class Networks(Scene):
         egde_col_pos = egde_col_pos| egde_col_pos2
         
         return(egde_col_pos)
+    def egde_black(self,edges, color = BLACK):
+        """Color all in one (BLACK default)"""
+        if type(color) == list:
+            egde_col = {edges_tuple:{"stroke_color": c}
+                            for edges_tuple,c in zip(edgesc,color)}
+        else:
+            egde_col = {edges_tuple:{"stroke_color": color}
+                            for edges_tuple in edges}
+        return(egde_col)
+    
+    def vertex_color(self,vertex,fill=["#A4E8FF"] ):
+        """Color all in one (BLACK default)"""
+        if type(fill) == list :
+            
+            verte_col = {v:{"fill_color": f} for v, f in zip(vertex,fill)}
+        else:   
+            verte_col = {v:{"fill_color": fill} for v in vertex}
+        
+        return(verte_col)
     def verte_color(self,eign_vec):
-
+        """Color depending on the communicability group"""
         pos_verte =  np.where(eign_vec > 0)
         neg_verte =  np.where(eign_vec < 0)
         
@@ -53,33 +75,20 @@ class Networks(Scene):
         
     def construct(self):
 
-        def arrowupdate_toright(arrow, l, t):
-            start = l.get_end()
-            end = l.get_start()
-
-            p = start+t*(end-start)*(2-t)
-            p2 =  start+t*(end-start)*(np.sqrt(t))
-            #start = l.get_end()
-
-            arrow.put_start_and_end_on(p2, p)
-        def trackfunc_toright(arrow,l):
-            t = tracker.get_value()
-            arrowupdate_toright(arrow, l, t)
-
-        def arrowupdate_toleft(arrow, l, t):
-             start = l.get_start()
-             end = l.get_end()
-
-             p = start+t*(end-start)*(2-t)
-             p2 =  start+t*(end-start)*(np.sqrt(t))
-             #start = l.get_end()
-
-             arrow.put_start_and_end_on(p2, p)
-             
-
-        def trackfunc_toleft(arrow,l):
-            t = tracker.get_value()
-            arrowupdate_toleft(arrow, l, t)    
+        def all_arrows(lright, lleft, k, color):
+            """Arrow Vgroup for anniimation"""
+            arrows = []
+            
+            for r,l,c in zip(lright,lleft,color):
+                arrows.append(Line(start = r + tracker.get_value()*(l-r)*
+                               (np.sqrt(tracker.get_value())),
+                               end = r + tracker.get_value()*(l-r)*
+                               (2-tracker.get_value()),
+                               color = c, buff = 0, tip_length = 0.3 *k).add_tip()
+                              )
+                
+            return VGroup(*arrows)
+        
         
         adj_arr = np.array([[0, 0, 0, 1, 1, 0, 0],
                             [0, 0, 0, 0, 1, 1, 1],
@@ -91,110 +100,398 @@ class Networks(Scene):
         
         spectra = np.linalg.eig(adj_arr)
         ##### Setup the data for visualisations
-        self.adj_to_list(adj_arr)
+        vertices1, edges1 = self.adj_to_list(adj_arr)
         
         
         G_decomposition = lambda val, vec: np.dot(vec.T, vec)*np.exp(val)
         list_g_decomp = [G_decomposition(val, vec[np.newaxis]) for val, vec
                  in zip(spectra[0], spectra[1])]
         list_g_decomp[0] == list_g_decomp[0].T
-
+        
+        ##### matrix 1
+        G_mat = []
+        for i in range(5):
+            if i != 0:
+                G_mat.append(np.dot(np.dot(spectra[1], np.diag(spectra[0]**i/m.factorial(i))),
+                       np.transpose(spectra[1]))+G_mat[-1])
+            else:
+                G_mat.append(np.dot(np.dot(spectra[1], np.diag(spectra[0]**i/m.factorial(i))),
+                        np.transpose(spectra[1])))
+        object_mat1 = []
+        for i in range(2):
+            G_mat[i] = np.round(G_mat[i],2)
+            object_mat1.append(Matrix(list(G_mat[i]),).scale(0.5))
+        print(object_mat1[1])
+        background= Rectangle().scale(1.6)
+        background.set_fill(opacity=.5)
+        background.set_color(BLACK)
+            
+        ##### matrix 2
+        adj_arr2 = np.array([[0, 0, 0, 1, 1, 0, 0],
+                            [0, 0, 0, 0, 1, 0, 1],
+                            [0, 0, 0, 0, 0, 1, 1],
+                            [1, 0, 0, 0, 0, 0, 0],
+                            [1, 1, 0, 0, 0, 0, 0],
+                            [0, 0, 1, 0, 0, 0, 0],
+                            [0, 1, 1, 0, 0, 0, 0],])
+        
+        spectra2 = np.linalg.eig(adj_arr2)
+        vertices2, edges2 = self.adj_to_list(adj_arr2)
+        
+        # G_mat2 = []
+        # for i in range(5):
+        #     if i != 0:
+        #         G_mat2.append(np.dot(np.dot(spectra2[1], np.diag(spectra2[0]**i/m.factorial(i))),
+        #                np.transpose(spectra2[1]))+G_mat2[-1])
+        #     else:
+        #         G_mat2.append(np.dot(np.dot(spectra2[1], np.diag(spectra2[0]**i/m.factorial(i))),
+        #                 np.transpose(spectra2[1])))
+        # for i in range(5):
+        #     G_mat2[i] = np.abs(np.round(G_mat2[i],2))
+            
         ##### Object creation
-        lyt = nx.bipartite_layout(self.vertices[:3], self.vertices[3:])
-        G = nx.Graph()
-        G.add_nodes_from(self.vertices)
-        G.add_edges_from(self.edges)
-        meta_ntw = Graph(list(G.nodes), list(G.edges),
+        
+        
+        ### network
+        lyt = nx.bipartite_layout(vertices1[:3], vertices1[3:])
+        G1 = nx.Graph()
+        G1.add_nodes_from(vertices1)
+        G1.add_edges_from(edges1)
+        meta_ntw1 = Graph(list(G1.nodes), list(G1.edges),
                          labels =True,
                          layout = "partite",
-                         #edge_config = self.egde_color(g_decomp),
+                         edge_config = self.egde_black(list(G1.edges)),
+                         vertex_config = self.vertex_color(list(G1.nodes),
+                         fill=["#808080", "#808080", "808080",
+                         "#FB8072", "808080", "#FDB462", "808080"]),
                          partitions = [[3,4,5,6]]) #for g_decomp
                     #in list_g_decomp[:5]]
-        
-        
-        r1 = VGroup(*meta_ntw)
-        ###
-        d1 = [Dot() for _ in range(len(r1[7:])*2)]
-        d1 = VGroup(*d1)
+        meta_ntw1bis = Graph(list(G1.nodes), list(G1.edges),
+                         labels =True,
+                         layout = "partite",
+                         edge_config = self.egde_black(list(G1.edges)),
+                         vertex_config = self.vertex_color(list(G1.nodes),
+                         fill=["#808080", "#808080", "#808080",
+                         "#808080", "#808080", "#FDB462", "#B3DE69"]),
+                         partitions = [[3,4,5,6]]) #for g_decomp
+        meta_ntw1bis2 = Graph(list(G1.nodes), list(G1.edges),
+                         labels =True,
+                         layout = "partite",
+                         edge_config = self.egde_black(list(G1.edges)),
+                         vertex_config = self.vertex_color(list(G1.nodes),
+                         fill=["#808080", "#808080", "#BEBADA",
+                         "#808080", "#808080", "#808080", "#B3DE69"]),
+                         partitions = [[3,4,5,6]])
+        #["#8DD3C7", "#FFFFB3", "#BEBADA", "#FB8072", "#80B1D3", "#FDB462", "#B3DE69", "#FCCDE5"]  
+        lyt = nx.bipartite_layout(vertices2[:3], vertices2[3:])
+        G2 = nx.Graph()
+        G2.add_nodes_from(vertices2)
+        G2.add_edges_from(edges2)
+        meta_ntw2= Graph(list(G2.nodes), list(G2.edges),
+                         labels =True,
+                         layout = "partite",
+                         edge_config = self.egde_black(list(G2.edges)),
+                         vertex_config = self.vertex_color(list(G2.nodes),
+                         fill=["#808080", "#808080", "#808080",
+                         "#808080", "#808080", "#FDB462", "#B3DE69"]),
+                         partitions = [[3,4,5,6]])#for g_decomp 
+        graphs  = [meta_ntw1,meta_ntw2]
+        r1 = VGroup(*graphs).arrange_in_grid(1, buff=1)
+        #r2 = VGroup(meta_ntw2).arrange(direction=DOWN)
+
         #path_list = VGroup(*path_list)
         edge_node_dict = {}
 
-        #edge_node_dict = {f"{n}":[r1[e+7] for e in meta_ntw[n].keys()] for n in  range(7)}
+        #edge_node_dict = {f"{n}":[r1[e+7] for e in meta_ntw1[n].keys()] for n in  range(7)}
        
-        for vertex in meta_ntw.vertices:
+        for vertex in meta_ntw1.vertices:
             connected_edges = []
-            for edge in meta_ntw.edges:
+            for edge in meta_ntw1.edges:
                 if vertex in edge:
                     connected_edges.append(edge)
       
         #move_sequence = AnimationGroup(*move_animations)
-        start = [1]
-        start_temp = [1]
-        tracker = ValueTracker(0.009)
-        # print(meta_ntw.edges)
-        # l = meta_ntw.edges[(0,3)]
         
-        # lend= l.get_end()
-        # lstart = l.get_start()
-        # p = lstart+0.01*(lend-lstart)
-        # A = Arrow(start = lstart, end = p, color = GREEN, buff = 0,
-        #           max_stroke_width_to_length_ratio = 20,
-        #           max_tip_length_to_length_ratio=20)
-        # move_animation = A.add_updater(lambda arrow : trackfunc(arrow,l)).update()
+        ####### Animation #######
+        ### setup
+     
+       
+        
+        ### Start
+        # self.play(LaggedStart(VGroup(r1).shift(4*LEFT),
+        #                        run_time=2))
+        max_step = 2
+        # ##### 1
+        # self.add(meta_ntw1.shift(4*LEFT))
+        # self.wait(1)
+        
+        # start_temp = [0,1,2,3,4,5,6]
+        # move_animations= {}
+        # col_vertex = [v.fill_color for
+        #               v in list(meta_ntw1.vertices.values())]
+        
+        # start_color_temp = []
+        # for i in start_temp:
+        #     start_color_temp.append(col_vertex[i])
+            
+        # # start_color_temp = [(col_vertex[e[0]], col_vertex[e[1]]) for
+        # #                e in list(meta_ntw1.edges.keys())]
+        
+        # for step in range(max_step):
+        #     tracker = ValueTracker(0.009)
+            
+        #     start_color = start_color_temp
+        #     start_color_temp = []
+        #     arrow_color= []
+            
+        #     start = start_temp
+        #     #print(len(start), len(start_color))
+        #     start_temp = []
+            
+        #     lleft = []
+        #     lright = []
+            
+        #     lines = list(meta_ntw1.edges.values())
+        #     edge_id = list(meta_ntw1.edges.keys())
 
-        move_animations= {}
-        print(meta_ntw.edges.items())
-        def all_arrows(lright, lend, k):
-            arrows = []
-            for r,l in zip(lright,lleft):
-               arrows.append(Line(start = r + tracker.get_value()*(l-r)*
-                              (np.sqrt(tracker.get_value())),
-                              end = r + tracker.get_value()*(l-r)*
-                              (2-tracker.get_value()),
-                              color = GREEN, buff = 0, tip_length = 0.3 *k
-                          # max_stroke_width_to_length_ratio = 20,
-                          # max_tip_length_to_length_ratio=20*k,
-                          ).add_tip()
-                             )
-            return VGroup(*arrows)
+        #     for i, c in zip(start, start_color):
+        #         connect_edges = []
+        #         for e, l in zip(edge_id, lines):
+        #             if i == e[0]:
+        #                 #print(["v:", v, " start : " ,start, "step : ", step ])    
+        #                 lleft.append(l.get_end())
+        #                 lright.append(l.get_start())
+        #                 start_color_temp.append(c)
+        #                 #arrow_color.append(c[0])
+        #                 start_temp.append(e[1])
+        #             if  i == e[1]:
+        #                     #print(["v:", v, " start : " ,start, "step : ", step ])
+        #                 lleft.append(l.get_start())
+        #                 lright.append(l.get_end())
+        #                 start_color_temp.append(c)
+        #                 #arrow_color.append(c[1])
+        #                 start_temp.append(e[0])
+           
+        #     draw_arrows = always_redraw(
+        #     lambda: all_arrows(lright, lleft, 1/m.factorial(step+1),
+        #                        color = start_color_temp))
+            
+        #     #print(start_color_temp)
+        #     #print(start_temp)
+        #     self.play(Create(draw_arrows))
+        #     self.play(tracker.animate.set_value(1), run_time=2, rate_func = linear)
+            
+        # self.wait(1)
+            
         
-        self.play(LaggedStart(Create(r1),
-                              run_time=3))
-        self.wait(1)
-    
-        for step in range(4):
+        
+        
+        # ##### 2
+        self.play(Create(meta_ntw1bis.shift(LEFT)))#.next_to(meta_ntw1, RIGHT, buff = 1)))
+        
+        start_temp = [5]
+        move_animations= {}
+        col_vertex = [v.fill_color for
+                      v in list(meta_ntw1bis.vertices.values())]
+        
+        start_color_temp = []
+        for i in start_temp:
+            start_color_temp.append(col_vertex[i])
+            
+        # start_color_temp = [(col_vertex[e[0]], col_vertex[e[1]]) for
+        #                e in list(meta_ntw1bis.edges.keys())]
+        
+        for step in range(max_step):
             tracker = ValueTracker(0.009)
+            
+            start_color = start_color_temp
+            start_color_temp = []
+            arrow_color= []
+            
             start = start_temp
+            #print(len(start), len(start_color))
             start_temp = []
-            move_animation = []
+            
             lleft = []
             lright = []
-            for v,l in meta_ntw.edges.items():
             
-                if v[0] in start and v[0] in [0,1,2]:
+            lines = list(meta_ntw1bis.edges.values())
+            edge_id = list(meta_ntw1bis.edges.keys())
 
-                    lleft.append(l.get_end())
-                    lright.append(l.get_start())
-                
-                elif v[1] in start and v[1] in [3,4,5,6]:
-                    print(["v:", v, " start : " ,start, "step : ", step ])
-                    lleft.append(l.get_start())
-                    lright.append(l.get_end())
-
-                draw_arrows = always_redraw(
-                    lambda: all_arrows(lright, lleft, 1/math.factorial(step+1)))
-
-                print([" start : " ,start, "step : ", step ])
-                if v[0] in start or v[1] in start:
-                    if v[0] not in start:
-                        start_temp.append(v[0])
-                    if v[1] not in start:
-                        start_temp.append(v[1])
+            for i, c in zip(start, start_color):
+                connect_edges = []
+                for e, l in zip(edge_id, lines):
+                    if i == e[0]:
+                        #print(["v:", v, " start : " ,start, "step : ", step ])    
+                        lleft.append(l.get_end())
+                        lright.append(l.get_start())
+                        start_color_temp.append(c)
+                        #arrow_color.append(c[0])
+                        start_temp.append(e[1])
+                    if  i == e[1]:
+                            #print(["v:", v, " start : " ,start, "step : ", step ])
+                        lleft.append(l.get_start())
+                        lright.append(l.get_end())
+                        start_color_temp.append(c)
+                        #arrow_color.append(c[1])
+                        start_temp.append(e[0])
+           
+            draw_arrows = always_redraw(
+            lambda: all_arrows(lright, lleft, 1/m.factorial(step+1),
+                                color = start_color_temp))
+            
+            #print(start_color_temp)
+            #print(start_temp)
             self.play(Create(draw_arrows))
-            self.play(tracker.animate.set_value(1), run_time=2, rate_func = linear)
-            #move_sequence = AnimationGroup(*move_animations)
-            #move_animations[f"{step}"]= VGroup(*move_animation)
-            #self.play(move_sequence, run_time=10, rate_func=linear)
+            self.play(tracker.animate.set_value(1), run_time=4, rate_func = smooth)
+            
+        self.wait(1)
+        # ##### 3
+        self.play(Create(meta_ntw2.next_to(meta_ntw1bis, RIGHT, buff = 1)))
+            
+        start_temp = [5]
+        move_animations= {}
+        col_vertex = [v.fill_color for
+                      v in list(meta_ntw2.vertices.values())]
+        
+        start_color_temp = []
+        for i in start_temp:
+            start_color_temp.append(col_vertex[i])
+            
+        # start_color_temp = [(col_vertex[e[0]], col_vertex[e[1]]) for
+        #                e in list(meta_ntw2.edges.keys())]
+        
+        for step in range(max_step):
+            tracker = ValueTracker(0.009)
+            
+            start_color = start_color_temp
+            start_color_temp = []
+            arrow_color= []
+            
+            start = start_temp
+            #print(len(start), len(start_color))
+            start_temp = []
+            
+            lleft = []
+            lright = []
+            
+            lines = list(meta_ntw2.edges.values())
+            edge_id = list(meta_ntw2.edges.keys())
+
+            for i, c in zip(start, start_color):
+                connect_edges = []
+                for e, l in zip(edge_id, lines):
+                    if i == e[0]:
+                        #print(["v:", v, " start : " ,start, "step : ", step ])    
+                        lleft.append(l.get_end())
+                        lright.append(l.get_start())
+                        start_color_temp.append(c)
+                        #arrow_color.append(c[0])
+                        start_temp.append(e[1])
+                    if  i == e[1]:
+                            #print(["v:", v, " start : " ,start, "step : ", step ])
+                        lleft.append(l.get_start())
+                        lright.append(l.get_end())
+                        start_color_temp.append(c)
+                        #arrow_color.append(c[1])
+                        start_temp.append(e[0])
+            
+            draw_arrows = always_redraw(
+            lambda: all_arrows(lright, lleft, 1/m.factorial(step+1),
+                                color = start_color_temp))
+            
+            #print(start_color_temp)
+            #print(start_temp)
+            self.play(Create(draw_arrows))
+            self.play(tracker.animate.set_value(1), run_time=5, rate_func = smooth)
+            
+        self.wait(1)
+        
+        
+        ##### 4
+
+        # self.play(Create(meta_ntw1bis2))#.next_to(meta_ntw2, RIGHT, buff = 1)))
+        
+        # start_temp = [2,6]
+        # move_animations= {}
+        # col_vertex = [v.fill_color for
+        #               v in list(meta_ntw1bis2.vertices.values())]
+        
+        # start_color_temp = []
+        # for i in start_temp:
+        #     start_color_temp.append(col_vertex[i])
+            
+        # # start_color_temp = [(col_vertex[e[0]], col_vertex[e[1]]) for
+        # #                e in list(meta_ntw1bis2.edges.keys())]
+        # arrow_list = []
+        # for step in range(max_step):
+        #     tracker = ValueTracker(0.009)
+            
+        #     start_color = start_color_temp
+        #     start_color_temp = []
+        #     arrow_color= []
+            
+        #     start = start_temp
+        #     #print(len(start), len(start_color))
+        #     start_temp = []
+            
+        #     lleft = []
+        #     lright = []
+            
+        #     lines = list(meta_ntw1bis2.edges.values())
+        #     edge_id = list(meta_ntw1bis2.edges.keys())
+        #     if step == 0:
+        #         lleft.append(lines[6].get_end())
+        #         lright.append(lines[6].get_start())
+        #         start_color_temp.append(start_color[0])
+        #         start_temp.append(edge_id[6][1])
+                
+        #         lleft.append(lines[6].get_start())
+        #         lright.append(lines[6].get_end())
+        #         start_color_temp.append(start_color[1])
+        #         #arrow_color.append(c[1])
+        #         start_temp.append(edge_id[6][0])
+
+
+        #     else:
+
+        #         for i, c in zip(start, start_color):
+        #             connect_edges = []
+        #             for e, l in zip(edge_id, lines):
+        #                 if i == e[0]:
+        #                     #print(["v:", v, " start : " ,start, "step : ", step ])    
+        #                     lleft.append(l.get_end())
+        #                     lright.append(l.get_start())
+        #                     start_color_temp.append(c)
+        #                     #arrow_color.append(c[0])
+        #                     start_temp.append(e[1])
+        #                 if  i == e[1]:
+        #                         #print(["v:", v, " start : " ,start, "step : ", step ])
+        #                     lleft.append(l.get_start())
+        #                     lright.append(l.get_end())
+        #                     start_color_temp.append(c)
+        #                     #arrow_color.append(c[1])
+        #                     start_temp.append(e[0])
+        #     arrow_list.append([lright,lleft, start_color_temp])
+        
+        
+        # for step in range(max_step):   
+        #     tracker = ValueTracker(0.009)
+        #     draw_arrows = always_redraw(
+        #     lambda: all_arrows(arrow_list[step][0], arrow_list[step][1], 1/(step+1),
+        #                         color = arrow_list[step][2]))
+        #     print(arrow_list[step])   
+        #     #print(start_color_temp)
+        #     #print(start_temp)
+        #     self.play(Create(draw_arrows))
+        #     self.play(tracker.animate.set_value(1), run_time=2, rate_func = linear)
+            
+            # self.wait(1)
+            # move_sequence = AnimationGroup(*move_animations)
+            # move_animations[f"{step}"]= VGroup(*move_animation)
+            # self.play(move_sequence, run_time=10, rate_func=linear)
         
 # python -m manim -pql graph_anime.py Networks     
         
+# [[1,6,2,5],[1,4,1,5],[1,6,1,5], [1,5,1,5], [1,5,2,5],
+#  [5,2,6,1],[5,1,4,1], [5,1,6,1], [5,1,5,1], [5,2,4]]
