@@ -287,7 +287,10 @@ class Networks(Scene):
         
         
         # ##### 2
+        arrow_list1 = []
+        arrow_list2 = []
         self.play(Create(meta_ntw1bis.shift(LEFT)))#.next_to(meta_ntw1, RIGHT, buff = 1)))
+        self.play(Create(meta_ntw2.next_to(meta_ntw1bis, RIGHT, buff = 1)))
         
         start_temp = [5]
         move_animations= {}
@@ -335,19 +338,19 @@ class Networks(Scene):
                         start_color_temp.append(c)
                         #arrow_color.append(c[1])
                         start_temp.append(e[0])
-           
-            draw_arrows = always_redraw(
-            lambda: all_arrows(lright, lleft, 1/m.factorial(step+1),
-                                color = start_color_temp))
+            arrow_list1.append([lright,lleft, start_color_temp])    
+        #     draw_arrows = always_redraw(
+        #     lambda: all_arrows(lright, lleft, 1/m.factorial(step+1),
+        #                         color = start_color_temp))
             
-            #print(start_color_temp)
-            #print(start_temp)
-            self.play(Create(draw_arrows))
-            self.play(tracker.animate.set_value(1), run_time=4, rate_func = smooth)
+        #     #print(start_color_temp)
+        #     #print(start_temp)
+        #     self.play(Create(draw_arrows))
+        #     self.play(tracker.animate.set_value(1), run_time=4, rate_func = smooth)
             
-        self.wait(1)
+        # self.wait(1)
         # ##### 3
-        self.play(Create(meta_ntw2.next_to(meta_ntw1bis, RIGHT, buff = 1)))
+       
             
         start_temp = [5]
         move_animations= {}
@@ -395,18 +398,31 @@ class Networks(Scene):
                         start_color_temp.append(c)
                         #arrow_color.append(c[1])
                         start_temp.append(e[0])
-            
-            draw_arrows = always_redraw(
-            lambda: all_arrows(lright, lleft, 1/m.factorial(step+1),
-                                color = start_color_temp))
+            arrow_list2.append([lright,lleft, start_color_temp])    
+            # draw_arrows = always_redraw(
+            # lambda: all_arrows(lright, lleft, 1/m.factorial(step+1),
+            #                     color = start_color_temp))
             
             #print(start_color_temp)
             #print(start_temp)
-            self.play(Create(draw_arrows))
-            self.play(tracker.animate.set_value(1), run_time=5, rate_func = smooth)
+            #self.play(Create(draw_arrows))
+            
             
         self.wait(1)
-        
+        for step in range(max_step):   
+            tracker = ValueTracker(0.009)
+            draw_arrows1 = always_redraw(
+            lambda: all_arrows(arrow_list1[step][0], arrow_list1[step][1], 1/(step+1),
+                                color = arrow_list1[step][2]))
+            draw_arrows2 = always_redraw(
+            lambda: all_arrows(arrow_list2[step][0], arrow_list2[step][1], 1/(step+1),
+                                color = arrow_list2[step][2]))
+   
+            self.add(VGroup(draw_arrows1, draw_arrows2))
+           
+            self.play(tracker.animate.set_value(1), run_time=4, rate_func = smooth)
+            
+
         
         ##### 4
 
