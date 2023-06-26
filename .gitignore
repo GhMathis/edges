@@ -4,3 +4,6 @@ manim_stuff/.spyproject/config/workspace.ini
 output/*
 pallette.color.R
 rapport/presentation/*
+pallette_color.R
+R_dead_code/*
+dead_output/*
