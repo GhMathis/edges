@@ -22,7 +22,7 @@ matrix.associations = function(Virus, Host){
 ##### From row ntw to matrice ntw (unipartie => square)
 # give a symetrical square matrice Host+Virus x Host+Virus association
 # all Host-Host or Virus-Virus associations are 0 
-matrix.associations.uni = function(Virus, Host){
+matrix.associations.uni = function(Virus, Host, prob=1){
   long_df = data.frame(Virus = Virus, Host = Host) 
   n_virus = length(unique(Virus))
   n_host = length(unique(Host))
@@ -35,9 +35,9 @@ matrix.associations.uni = function(Virus, Host){
     temp = long_df %>% filter(Virus == v)
     for(h in unique(temp$Host)){
       ntw[which(rownames(ntw) == v),
-          which(colnames(ntw) == h)] = 1
+          which(colnames(ntw) == h)] = prob
       ntw[which(rownames(ntw) == h),
-          which(colnames(ntw) == v)] = 1
+          which(colnames(ntw) == v)] = prob
       
     }
   }
