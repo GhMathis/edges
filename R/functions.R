@@ -23,7 +23,7 @@ matrix.associations = function(Virus, Host){
 # give a symetrical square matrice Host+Virus x Host+Virus association
 # all Host-Host or Virus-Virus associations are 0 
 matrix.associations.uni = function(Virus, Host, prob=1){
-  long_df = data.frame(Virus = Virus, Host = Host) 
+  long_df = data.frame(Virus = Virus, Host = Host, prob=prob) 
   n_virus = length(unique(Virus))
   n_host = length(unique(Host))
   ntw = matrix(0, nrow = n_virus+n_host, ncol = n_host+n_virus) # put host and virus
@@ -31,17 +31,20 @@ matrix.associations.uni = function(Virus, Host, prob=1){
   
   colnames(ntw) = c(unique(Host),unique(Virus))
   rownames(ntw) = c(unique(Host),unique(Virus))
+
   for(v in unique(Virus)){
     temp = long_df %>% filter(Virus == v)
-    for(h in unique(temp$Host)){
-      ntw[which(rownames(ntw) == v),
-          which(colnames(ntw) == h)] = prob
-      ntw[which(rownames(ntw) == h),
-          which(colnames(ntw) == v)] = prob
+    for(i in 1:nrow(temp)){
+      h = temp$Host[i]
+      p = temp$prob[i]
       
+
+      ntw[which(rownames(ntw) == v),
+          which(colnames(ntw) == h)] = p
+      ntw[which(rownames(ntw) == h),
+          which(colnames(ntw) == v)] = p
     }
   }
-  norm
   return(ntw)
 }
 ##### svd and RDPG function 
