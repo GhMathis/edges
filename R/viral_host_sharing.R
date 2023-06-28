@@ -179,17 +179,17 @@ n_array = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_COUNT"))
 n_iteration = nrow(trefle)
 n = n_iteration %/% n_array
 r = n_iteration %% n_array
-
 if(array_id == 1){
   iter = c(1:(n*(array_id)-1))
   print(head(iter,n = 1L))
   print(tail(iter,n = 1L))
-}else if(array_id != n_array){
-  iter = c((n*array_id):(n*(array_id+1)-1))
+}else{
+  iter = c((n*(array_id-1)):(n*(array_id)-1))
   print(head(iter,n = 1L))
   print(tail(iter,n = 1L))
-}else if(array_id == n_array){
-  iter = c((n*array_id):n_iteration)
+}
+if(array_id == n_array){
+  iter = c(iter,c((n*array_id):n_iteration))
   print(head(iter,n = 1L))
   print(tail(iter,n = 1L))
 }
@@ -201,7 +201,7 @@ registerDoParallel(cores=ncores-1)# Shows the number of Parallel Workers to be u
 getDoParWorkers()# number of actual workers
 
 ### test
-iter = 1:getDoParWorkers()
+#iter = 1:getDoParWorkers()
 ###
 
 viral_host_sharing_G_df = foreach(virus = trefle$virus[iter], host = trefle$host[iter],
@@ -214,7 +214,7 @@ viral_host_sharing_G_df = foreach(virus = trefle$virus[iter], host = trefle$host
                                                VirusOrder_zeta = VirusOrder_zeta, row_ID = row_ID, arg=arg)}
 
 
-#write.csv(viral_host_sharing_G_df, paste("output/viral_host_sharing_dG_df", array_id, ".csv", sep=""))
+write.csv(viral_host_sharing_G_df, paste("output/viral_host_sharing_dG_df", array_id, ".csv", sep=""))
 
 
 
