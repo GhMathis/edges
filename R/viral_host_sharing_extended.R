@@ -42,10 +42,6 @@ deepness = list(2,6,10,20,50,"inf")
 #trefle = trefle[trefle$host %in% clover$Host & trefle$virus %in% clover$Virus ,]
 #####
 
-
-trefle = trefle %>%
-  filter(host != "Homo sapiens")
-
 trefle$HostOrder= "_"
 trefle$VirusOrder= "_"
 trefle$host = as.factor(trefle$host)
@@ -123,7 +119,7 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
     #                 virus = character(),
     #                 score_virus_group = numeric(),
     #                 deepness = integer(), X = integer())
-    i = 0
+    i = 6
     for(d in deepness){
       i = i+1
       ##### Compute all z score for all groups of Host and Virus order.
@@ -131,9 +127,8 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
       ### HOST     
       
       # global effect of the perturbation 
-      main_host = trefle$host[trefle$HostOrder %in% unique(trefle_main_HostOrder$HostOrder)]
       
-      host_host_ID =  which(colnames(uni_ntw_trefle) %in% main_host)
+      host_host_ID =  which(colnames(uni_ntw_trefle) %in% trefle$host)
 
       mean_dG_h = mean(G_trefle[[i]][host_host_ID, host_host_ID]-
                          G_zeta_trefle[[i]][host_host_ID, host_host_ID])
@@ -158,9 +153,8 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
       
       ### VIRUS
       # global effect of the perturbation 
-      main_virus = trefle$virus[trefle$VirusOrder %in% unique(trefle_main_VirusOrder$VirusOrder)]
       
-      virus_virus_ID =  which(colnames(uni_ntw_trefle) %in% main_virus)
+      virus_virus_ID =  which(colnames(uni_ntw_trefle) %in% trefle$virus)
       
       mean_dG_h = mean(G_trefle[[i]][virus_virus_ID, virus_virus_ID]-
                          G_zeta_trefle[[i]][virus_virus_ID, virus_virus_ID])
@@ -213,45 +207,41 @@ iter = trefle%>%
   slice_sample(n=1000)%>%
   filter(HostOrder %in% unique(trefle_main_HostOrder$HostOrder))%>%
   pull(X)
-str(iter)
 
 #iter = sample(nrow(trefle), 5000)
-#n_iteration = nrow(trefle)
+n_iteration = length(iter)
 ###
 
-# print(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-# print(Sys.getenv("SLURM_ARRAY_TASK_COUNT"))
-# array_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
-# n_array = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_COUNT"))
-# 
-# 
-# 
-# n = n_iteration %/% n_array
-# r = n_iteration %% n_array
-# 
-# if(array_id == 1){
-#   iter = c(1:(n*(array_id)-1))
-#   print(head(iter,n = 1L))
-#   print(tail(iter,n = 1L))
-# }else{
-#   iter = c((n*(array_id-1)):(n*(array_id)-1))
-#   print(head(iter,n = 1L))
-#   print(tail(iter,n = 1L))
-# }
-# if(array_id == n_array){
-#   iter = c(iter,c((n*array_id):n_iteration))
-#   print(head(iter,n = 1L))
-#   print(tail(iter,n = 1L))
-# }
+print(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+print(Sys.getenv("SLURM_ARRAY_TASK_COUNT"))
+array_id = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
+n_array = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_COUNT")) 
 
+
+n = n_iteration %/% n_array
+r = n_iteration %% n_array
+
+if(array_id == 1){
+ ID = c(1:(n*(array_id)-1))
+ print(head(ID,n = 1L))
+ print(tail(ID,n = 1L))
+}else{
+  ID = c((n*(array_id-1)):(n*(array_id)-1))
+ print(head(ID,n = 1L))
+ print(tail(ID,n = 1L))
+}
+if(array_id == n_array){
+  ID = c(ID,c((n*array_id):n_iteration))
+ print(head(ID,n = 1L))
+ print(tail(ID,n = 1L))
+}
+iter = iter[ID]
 ncores =detectCores()
 print(ncores)
 registerDoParallel(cores=ncores-1)# Shows the number of Parallel Workers to be used
 getDoParWorkers()# number of actual workers
 
 
-
-t1 = Sys.time()
 viral_host_sharing_extended_df = foreach(virus = trefle$virus[iter], host = trefle$host[iter],
                                   HostOrder_zeta = trefle$HostOrder,
                                   VirusOrder_zeta = trefle$VirusOrder,
@@ -260,9 +250,8 @@ viral_host_sharing_extended_df = foreach(virus = trefle$virus[iter], host = tref
                                   .combine = rbind,.verbose = T) %dopar%
   {communi.func(virus = virus, host = host, HostOrder_zeta = HostOrder_zeta,
                 VirusOrder_zeta = VirusOrder_zeta, row_ID = row_ID, arg=arg)}
-t2 = Sys.time()
-print(c("time : ", t2-t1))
-write.csv(viral_host_sharing_extended_df, "output/viral_host_sharing_extended_df.csv")
-# write.csv(viral_host_sharing_G_df, paste("output/viral_host_sharing_G_depness",
-#                                          "_df", array_id, ".csv", sep=""))
+
+#write.csv(viral_host_sharing_extended_df, "output/viral_host_sharing_extended_df.csv")
+write.csv(viral_host_sharing_extended_df, paste("output/viral_host_sharing_extended",
+                                          "_df", array_id, ".csv", sep=""))
 
