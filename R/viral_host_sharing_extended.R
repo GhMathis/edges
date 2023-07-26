@@ -4,7 +4,6 @@ library(parallel) # to detect core
 
 source("R/functions.R")
 
-
 communicability.lenght.path<- function(A, deepness){
   spectra = eigen(A)
   d = spectra$values
@@ -65,15 +64,16 @@ G_trefle = communicability.lenght.path(uni_ntw_trefle, deepness = deepness)
 # trefle$IDmatrix_h = sapply(trefle$host, function(x) which(row.names(uni_ntw_trefle) == x)) 
 trefle$HostOrder = as.character(trefle$HostOrder)
 trefle$VirusOrder = as.character(trefle$VirusOrder)
-
+HO = trefle%>%
+  count(HostOrder)%>%
+  arrange(desc(n))%>%pull(HostOrder)
+VO = trefle%>%
+  count(VirusOrder)%>%
+  arrange(desc(n))%>%pull(VirusOrder)
 trefle_main_HostOrder = trefle %>%
-  filter(HostOrder %in% c("Rodentia", "Primates", "Cetartiodactyla", "Carnivora",
-                          "Chiroptera", "Perissodactyla", "Lagomorpha", "Diprotodontia",
-                          "Didelphimorphia", "Eulipotyphla"))
+  filter(HostOrder %in% HO[1:15])
 trefle_main_VirusOrder = trefle %>%
-  filter(VirusOrder %in% c("Bunyavirales", "Mononegavirales", "Herpesvirales", "Amarillovirales",
-                           "Picornavirales", "Reovirales", "Martellivirales","Chitovirales",
-                           "Piccovirales", "Zurhausenvirales"))
+  filter(VirusOrder %in% VO[1:15])
 
 ntw_base = list(uni_ntw_trefle = uni_ntw_trefle,
                 G_trefle = G_trefle,
@@ -200,14 +200,14 @@ communi.func<- function(virus,host,HostOrder_zeta, VirusOrder_zeta, row_ID,arg){
 ### subset of interaction
 set.seed(1000)
 
-unique(trefle_main_HostOrder$HostOrder)
+
 trefle$X = 1:nrow(trefle)
 iter = trefle%>%
   group_by(HostOrder)%>%
   slice_sample(n=1000)%>%
   filter(HostOrder %in% unique(trefle_main_HostOrder$HostOrder))%>%
   pull(X)
-
+str(as.factor(trefle[iter,]$VirusOrder))
 #iter = sample(nrow(trefle), 5000)
 n_iteration = length(iter)
 ###
