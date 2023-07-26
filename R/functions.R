@@ -1,4 +1,7 @@
+library(scico)
+library(lattice)
 normalized = function(x) (x-min(x))/(max(x)-min(x))
+normalized_2=  function(x) (x -mean(x))/(max(x)-min(x))
 
 ##### From row ntw to matrice ntw (bipartie => non_square)
 matrix.associations = function(Virus, Host){
@@ -79,4 +82,17 @@ communicability<- function(A, spectra = NULL){
   rownames(G)= rownames(A)
   colnames(G)= colnames(A)
   return(G)
+}
+
+make.color.scale = function(mtx, white = 0.01){
+  brk <- do.breaks(c(-max(abs(mtx)), max(abs(mtx))), 8)
+  pal = scico(length(brk)-1, palette = "vik")
+  brk = append(brk, white, 5)
+  brk = append(brk, -white, 4)
+  
+  pal = append(pal, "#FFFFFF", 4)
+  pal = append(pal, "#FFFFFF", 4)
+  
+  return(list(brk = brk, pal = pal))
+  
 }
