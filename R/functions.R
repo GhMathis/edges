@@ -84,6 +84,21 @@ communicability<- function(A, spectra = NULL){
   return(G)
 }
 
+clustering.func = function(ntw, componente = 2:N){
+  N = ncol(ntw)
+  spectra = eigen(ntw)
+  
+  G_cluster = 0
+  for(i in componente){
+    temp = spectra$vectors[,i]%*%t(spectra$vectors[,i])*exp(spectra$values[i])
+    G_cluster = G_cluster + temp
+  }
+  
+  rownames(G_cluster) = rownames(ntw)
+  colnames(G_cluster) = colnames(ntw)
+  return(G_cluster)
+}
+
 make.color.scale = function(mtx, white = 0.01){
   brk <- do.breaks(c(-max(abs(mtx)), max(abs(mtx))), 8)
   pal = scico(length(brk)-1, palette = "vik")
