@@ -34,7 +34,7 @@ str(clover)
 #   filter(host != "Homo sapiens")
 
 ##### compute adjacency matrix 
-highly connected = matrix.associations.uni(Virus = trefle$virus, Host = trefle$host)
+uni_ntw_trefle = matrix.associations.uni(Virus = trefle$virus, Host = trefle$host)
 uni_ntw_clover = matrix.associations.uni(Virus = clover$Virus, Host = clover$Host)
 ##### compute communicability matrix
 G_trefle = communicability(uni_ntw_trefle)
@@ -99,10 +99,12 @@ for(h in unique(df_clustering_host$Var2)){
   }
 }
 
+str(df_clustering_host)
 ggplot(df_clustering_host)+
   geom_bin_2d(aes(phylodist, clustering),bins = 50)+
-  geom_smooth(aes(phylodist, clustering, col = HostOrder1))+
+  geom_smooth(aes(phylodist, clustering, col = HostOrder1), method ="gam")+
   color_palette("set3")+
+  scale_x_log10()+
   facet_wrap(~HostOrder1)
 
 # ggplot(df_clustering_host)+
@@ -120,7 +122,16 @@ ggplot()+
   scale_colour_brewer(palette = "Set3")+
   labs(x = "Phylogenetic distance (log scale)", y = "viral similarity", col = "Host Order of the 2nd part")+
   main_theme
-
+str(df_clustering_host)
+unique(df_clustering_host$HostOrder2)
+str(recap_primate)
+recap_primate = df_clustering_host%>%
+  filter(HostOrder1 == "Primates")%>%
+  group_by(HostOrder2) %>%
+  summarise(N = length(clustering),
+            mean_clustering = mean(clustering, na.rm=TRUE),
+            sd_clustering = sd(clustering, na.rm=TRUE),
+            se_clustering = clustering / sqrt(N),.groups = "keep")
 df_clustering_host%>%
   filter(HostOrder1 == "Primates")%>%
 ggplot()+
@@ -235,6 +246,64 @@ ggplot(df_clustering_host)+
   geom_smooth(aes(dir_vrl_shr, clustering, col = HostOrder2 ), se = F, method = "lm")+
   scale_colour_brewer(palette = "Set3")+
   facet_wrap(~HostOrder1)+
+  main_theme
+
+### Same for virus (host sharing)
+
+ntw_trefle_sqrt_host = ntw_trefle_sqrt[rownames(ntw_trefle_sqrt)%in% unique(trefle$virus),
+                                       colnames(ntw_trefle_sqrt)%in% unique(trefle$virus)]
+df_direct_host_sharing = melt(ntw_trefle_sqrt_host, value.name = "dir_hst_shr")
+df_direct_host_sharing$ID_virus = paste(df_direct_host_sharing$Var1, df_direct_host_sharing$Var2)
+df_direct_host_sharing = df_direct_host_sharing[,!(colnames(df_direct_host_sharing) %in% c("Var1", "Var2"))]
+
+df_clustering_virus = melt(G_cluster[rownames(G_cluster)%in% unique(trefle$virus),
+                          colnames(G_cluster)%in% unique(trefle$virus)],value.name = "clustering")
+df_clustering_virus$ID_virus = paste(df_clustering_virus$Var1, df_clustering_virus$Var2)
+str(df_clustering_virus)
+df_clustering_virus = df_clustering_virus%>%
+  full_join(df_direct_host_sharing, by = c("ID_virus"))
+
+main_v_order = clover%>%
+  count(VirusOrder)%>%
+  arrange(desc(n))%>%
+  slice(1:10)
+str(df_clustering_virus)
+df_clustering_virus$VirusOrder1 = "_"
+for(v in unique(df_clustering_virus$Var1)){
+  VO = clover$VirusOrder[which(clover$Virus == v)[1]]
+  virus_indexs = which(df_clustering_virus$Var1 == v)
+  if (VO %in% main_v_order$VirusOrder){
+    df_clustering_virus$VirusOrder1[virus_indexs] = as.character(VO)
+  }else{
+    df_clustering_virus$VirusOrder1[virus_indexs] = "Other"
+  }
+  
+}
+df_clustering_virus$VirusOrder2 = "_"
+for(v in unique(df_clustering_virus$Var2)){
+  VO = clover$VirusOrder[which(clover$Virus == v)[1]]
+  virus_indexs = which(df_clustering_virus$Var2 == v)
+  if (VO %in% main_v_order$VirusOrder){
+    df_clustering_virus$VirusOrder2[virus_indexs] = as.character(VO)
+  }else{
+    df_clustering_virus$VirusOrder2[virus_indexs] = "Other"
+  }
+  
+}
+str(df_clustering_virus)
+ggplot(df_clustering_virus)+
+  geom_point(aes(dir_hst_shr, clustering))+
+  geom_smooth(aes(dir_hst_shr, clustering), method = "lm")+
+  scale_colour_brewer(palette = "Set3")+
+  #facet_wrap(~HostOrder1)+
+  labs(x = "Host sharing count", y =  "Host (spectrum) similaity")+
+  main_theme
+ggplot(df_clustering_virus)+
+  geom_point(aes(dir_hst_shr, clustering, col = VirusOrder2))+
+  geom_smooth(aes(dir_hst_shr, clustering, col = VirusOrder2), method = "lm")+
+  scale_colour_brewer(palette = "Set3")+
+  facet_wrap(~VirusOrder1)+
+  labs(x = "Host sharing count", y =  "Host (spectrum) similaity")+
   main_theme
 ##### geo overlap data 
 
